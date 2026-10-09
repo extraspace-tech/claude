@@ -1,0 +1,15 @@
+# Model routing (user preference, 2026-10-05; copied to Extra Space 2026-10-09)
+
+Always loaded (no `paths:` filter). The global rule is in `~/.claude/CLAUDE.md` "Roles and models"; this file adds the workspace details.
+
+- **Main session = Fable, high effort = architect and software engineer.** `~/.claude/settings.json` and `.claude/settings.json` set `"model": "fable"`; the global file sets `effortLevel: high`. Brainstorming, exploring, design, specs, `docs/plans/` files, briefs, the review of subagent work and the verdict happen here. The main session does not edit product code. If the system prompt shows another model, say so once; the user switches with `/model`.
+- **Implementation → `implementer` subagent** (`~/.claude/agents/implementer.md`, Opus 5.5, high effort). The brief names the repo (`../CMS`), the csproj, the files the agent owns, the shared contracts, the spec feature doc and the shared notes file. Money, concurrency and payment work still gets exact code in the brief or plan.
+- **Code review → `code-reviewer` subagent** (`.claude/agents/code-reviewer.md`, Opus 5.5, high effort). This covers `/code-review`, reviewing an implementation against its plan, and superpowers spec-compliance or code-quality reviewer steps. Its report is input to the main session's own review, not a replacement for it.
+- **Live dev walk → `dev-walker` subagent** (`.claude/agents/dev-walker.md`, Opus 5.5, high effort). Pass the repo, csproj, the test cases, known fixtures and cleanup expectations; relay its PASS/FAIL table. The local API writes to the staging database.
+- **Every other subagent** (`Explore`, `Plan`, `general-purpose`) gets `model: "opus"` on the Agent call.
+- **Parallel work.** The main session may run several subagents at once when the pieces are independent. Each implementer owns its own files; two never edit the same file. Parallel walkers share ONE local app (memory `feedback-parallel-walkers`). The main session passes shared decisions between agents (brief, shared notes file in the scratchpad, SendMessage).
+- **After the subagents finish** the main session reads the real diff (`git -C ../CMS diff`) and the build / test / walk output, checks that the pieces fit, sends defects back to an implementer, and reports a verdict per piece: ACCEPT / FIX NEEDED / BLOCKED, with what was verified and what was not.
+- **Fallback:** agent files load when a session starts. If `implementer`, `code-reviewer` or `dev-walker` is "not found", dispatch `general-purpose` with `model: "opus"` and paste the body of the matching agent file at the top of the prompt.
+- Quick checks that decide the next step (one grep, one query) stay in the main session.
+- Unchanged: the design gate (present the design, wait for go-ahead before code), no commit or push unless the user asks in that turn, migrations by hand, no SQL writes.
+- Cursor: the hybrid workflow (`.cursor/rules/implementer.mdc`, `docs/plans/TEMPLATE*.md`, `.claude/scripts/`) stays in the repo for the times the user chooses Cursor; it is not the default.

@@ -1,0 +1,13 @@
+{
+  // Open THIS file (File > Open Workspace from File). Claude/ must stay the FIRST folder:
+  // the Claude Code extension keys settings, hooks, rules and memory to the first root.
+  "folders": [
+    { "name": "Claude (context, start here)", "path": "." },
+    { "name": "CMS (new C# repo, PUBLIC)", "path": "../CMS" },
+    { "name": "Backend Demo (Node reference, read-only)", "path": "../Backend Demo/backend" },
+    { "name": "API (empty)", "path": "../API" }
+  ],
+  "settings": {
+    "files.eol": "\n"
+  }
+}

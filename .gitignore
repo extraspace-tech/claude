@@ -1,0 +1,43 @@
+# Postman environments hold live passwords. Never commit them.
+*.postman_environment.json
+
+# Anything else that could carry a credential.
+*.pem
+*.key
+.env
+.env.*
+*.local.env
+appsettings.Development.json
+appsettings.Local.json
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets (project-scope MCP config)
+.mcp.json
+.cursor/mcp.json
+
+# Tools that insist on the project root
+.serena/cache/
+.serena/project.local.yml
+.superpowers/
+
+# Claude Code runtime state inside .claude/ (never context)
+.claude/scheduled_tasks.lock
+.claude/scheduled_tasks.json
+.claude/routines/.state/
+.claude/worktrees/
+.claude/checkpoints/
+.claude/mailbox/
+.claude/agent-registry.json
+.claude/agent-memory-local
+.claude/first-run
+.claude/assistant-daemon-state.json
+
+# IDE
+.vs/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json

@@ -1,0 +1,8 @@
+---
+description: Extra Space workspace house rules (same file Claude reads)
+alwaysApply: true
+---
+
+Read and follow `.claude/CLAUDE.md`. It is the workspace convention document.
+
+@.claude/CLAUDE.md

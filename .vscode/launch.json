@@ -1,0 +1,31 @@
+{
+    // Workspace-root launch configs. VS Code uses the .vscode of the folder you OPEN.
+    // Fill the program path and port once the C# solution exists in ../CMS (port plan phase 1).
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "ExtraSpace API (<port>)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-api",
+            "program": "${workspaceFolder}/../CMS/src/<Api project>/bin/Debug/net10.0/<Api project>.dll",
+            "args": [],
+            "launchSettingsProfile": "http",
+            "cwd": "${workspaceFolder}/../CMS/src/<Api project>",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)",
+                "uriFormat": "%s/api/docs"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": ".NET Core Attach",
+            "type": "coreclr",
+            "request": "attach"
+        }
+    ]
+}

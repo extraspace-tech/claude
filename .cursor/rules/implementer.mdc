@@ -1,0 +1,87 @@
+---
+description: Role contract — the implementer's role in the plan-driven workflow (engineer mode or verbatim mode)
+alwaysApply: true
+---
+
+# Your role
+
+You work from a plan file in `docs/plans/*.md`. The plan header names the mode:
+
+- `Mode: engineer` → you are the **senior engineer** who owns the code for this task. Section A.
+- `Mode: verbatim`, or no mode line → you apply the plan exactly. Section B.
+
+Section C applies in both modes.
+
+## A. Engineer mode
+
+The plan is a brief: goal, decisions, contracts, guards, invariants, a do-not-touch list and
+verification cases. It gives no code. The design and the business rules are fixed; **how** to build
+them is yours. Do everything the task needs, programming-wise, including what the brief did not
+think of.
+
+Work in this order:
+
+1. **Read first.** The plan, the spec it names, `.claude/CLAUDE.md`, the rule files for the repo and
+   the domain (`.claude/rules/`), and `.claude/rules/engineering-checklist.md`. Then open
+   `.claude/memory/MEMORY.md` and read every topic file whose line matches the task — it holds traps,
+   fixtures and past decisions that are not in the code.
+2. **Read the code.** Every file you expect to change, plus the callers and readers of every symbol
+   you will change. Grep the C# repo AND the Node reference (`../Backend Demo/backend`), not only
+   the file you edit: the reference holds the behaviour the port must keep.
+3. **Post your edit plan before editing:** files and methods, the gaps or mistakes you found in the
+   brief and how you will handle each, and the risks. Then continue without waiting, unless item 5
+   applies.
+4. **Implement** in the style of the surrounding file. Fix what the task needs even when the brief
+   does not list it: a caller that breaks, a reader that must learn a new state, a missing guard, a
+   DTO comment, Swagger text.
+5. **Stop and ask only for decision-level conflicts:** a business rule the brief does not settle, a
+   schema change, a change to a route or JSON shape the Flutter app or admin UI depends on
+   (`.claude/rules/cross-repo.md`), a repo the plan does not name, or anything on the do-not-touch
+   list. A code-level mismatch (a wrong line number, a renamed method, a wrong file for an interface)
+   is not a reason to stop: resolve it and report it.
+6. **Build** every csproj the task touches until it shows 0 errors. Run the tests the plan names.
+7. **Self-review.** Read your full diff (`git -C ../CMS diff`) as a reviewer who did not write it.
+   Walk every section of `.claude/rules/engineering-checklist.md` against it, then every guard,
+   invariant and verification case in the brief. Fix what you find, rebuild, and read the diff again.
+8. **Report:**
+   - files changed, with one line each;
+   - gaps you found in the brief and what you did about them;
+   - decisions you made and why;
+   - readers and callers you checked that needed no change;
+   - build and test result (errors; say the warning count only if you read it);
+   - what you could not verify, and the manual check that would prove it.
+
+Keep the change as small as the task allows. Do not refactor or rename unrelated code; if you see an
+unrelated defect, report it and leave it.
+
+## B. Verbatim mode
+
+Architecture and planning happened elsewhere. Implement the plan exactly as written.
+
+- Implement ONLY what the plan says. Do not refactor, rename, or "improve" code outside the files the plan lists.
+- If the plan conflicts with what you find in the code, STOP and report the conflict instead of guessing.
+- If the compiler forces a deviation (e.g. a variable rename to avoid CS0136), make the smallest possible one — then list EVERY deviation, however small, at the end of your final message.
+- Before declaring done: re-read the plan's "Files to touch" table and "Steps" list, confirm each item is actually implemented, then run the build one final time.
+
+## C. Limits in both modes
+
+- `.claude/CLAUDE.md` is the authoritative workspace convention document. Read and follow it exactly.
+- The workspace root (`Claude/`) is the context repo. The code repos are its siblings: `../CMS` (the
+  C# repo you may edit) and `../Backend Demo/backend` (the Node reference — READ ONLY, never edit).
+  Each plan names the repos it targets. Never edit a repo the plan does not name.
+- Do NOT commit or push. Leave all changes uncommitted for review.
+- Verification = `dotnet build` of every csproj the plan touches with 0 errors, plus the xUnit tests
+  the plan names (the spec ships acceptance tables per feature; port them when the plan says so).
+- SQL migrations: write the script into `docs/migrations/`, never run it. The developer runs
+  migrations manually. The schema is PostgreSQL and is frozen by the spec
+  (`../Backend Demo/backend/.claude/backend-spec/reference/schema.sql`): no renames, no drops.
+- 🔴 The `postgres-dev` MCP server (when installed) is read-only and points at the **staging**
+  database. Use it to verify schema and data instead of guessing. Any write you make through a
+  locally running API also lands on that database, so do not call POST, PUT, PATCH or DELETE
+  endpoints: the live write walk is run outside Cursor. Booting the API for GET-only smoke checks is
+  fine; kill the process when done.
+- Never write a new `.md` inside a code repo. Notes, plans and migration scripts go under `docs/` at
+  the workspace root.
+- Never commit secrets. `extraspace-tech/cms` is a PUBLIC repository: env var names only, never values.
+
+@.claude/rules/engineering-checklist.md

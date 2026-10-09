@@ -1,0 +1,94 @@
+{
+  "permissions": {
+    "allow": [],
+    "additionalDirectories": [
+      "../CMS",
+      "../API",
+      "../Backend Demo"
+    ]
+  },
+  "model": "fable",
+  "enableAllProjectMcpServers": true,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); ws=$(cd \"$CLAUDE_PROJECT_DIR/..\" && pwd); case \"$f\" in \"$ws/Backend Demo\"/*) echo \"Blocked: Backend Demo is the client's reference repo and is read-only. Copy what you need into Claude/docs/ instead.\"; exit 2;; esac; case \"$f\" in \"$ws\"/CMS/*|\"$ws\"/API/*) ;; *) exit 0;; esac; case \"$f\" in */.claude/*|*/.cursor/*|*/.agents/*) echo \"Blocked: tool folders (.claude, .cursor, .agents) belong in the workspace root Claude/, never inside a code repo.\"; exit 2;; esac; b=$(basename \"$f\"); case \"$b\" in CLAUDE*.md|AGENTS.md|GEMINI.md|.claude*|.cursor*|.mcp.json|skills-lock.json) echo \"Blocked: $b belongs in the workspace root (Claude/.claude or Claude/.cursor), never inside a code repo.\"; exit 2;; esac; case \"$b\" in *.md) [ -e \"$f\" ] || { echo \"Blocked: new markdown inside a code repo. Put notes, plans and handovers under Claude/docs/.\"; exit 2; };; esac; exit 0",
+            "shell": "bash"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | grep '\\.cs$' >> /tmp/claude-extraspace-cs-dirty; true",
+            "shell": "bash"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for p in $(cat \"$CLAUDE_PROJECT_DIR/.claude/dev-ports\" 2>/dev/null); do pid=$(lsof -ti tcp:$p 2>/dev/null | head -1); [ -n \"$pid\" ] && [ \"$(ps -o ppid= -p \"$pid\" | tr -d ' ')\" = \"1\" ] && kill \"$pid\" 2>/dev/null; done; true",
+            "shell": "bash",
+            "statusMessage": "Reaping leftover dev apps (ports in .claude/dev-ports)"
+          },
+          {
+            "type": "command",
+            "command": "[ -f /tmp/claude-extraspace-cs-dirty ] || exit 0; fail=0; sort -u /tmp/claude-extraspace-cs-dirty | while IFS= read -r f; do d=$(dirname \"$f\"); while [ \"$d\" != / ] && ! ls \"$d\"/*.csproj >/dev/null 2>&1; do d=$(dirname \"$d\"); done; ls \"$d\"/*.csproj 2>/dev/null; done | sort -u > /tmp/claude-extraspace-csproj; rm -f /tmp/claude-extraspace-cs-dirty; while IFS= read -r c; do out=$(dotnet build \"$c\" --nologo -v q 2>&1) || { fail=1; echo \"dotnet build FAILED after this turn's C# edits: $c\"; echo \"$out\" | grep -iE 'error' | head -15; }; done < /tmp/claude-extraspace-csproj; rm -f /tmp/claude-extraspace-csproj; [ \"$fail\" = 0 ] && exit 0; exit 2",
+            "shell": "bash",
+            "timeout": 600,
+            "statusMessage": "Checking dotnet build in background",
+            "asyncRewake": true
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "figma@claude-plugins-official": true,
+    "caveman@caveman": true,
+    "ponytail@ponytail": true,
+    "fullstack-dev-skills@fullstack-dev-skills": true,
+    "csharp-lsp@claude-plugins-official": true,
+    "andrej-karpathy-skills@karpathy-skills": true
+  },
+  "extraKnownMarketplaces": {
+    "fullstack-dev-skills": {
+      "source": {
+        "source": "github",
+        "repo": "jeffallan/claude-skills"
+      }
+    },
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    },
+    "caveman": {
+      "source": {
+        "source": "github",
+        "repo": "JuliusBrussee/caveman"
+      }
+    },
+    "karpathy-skills": {
+      "source": {
+        "source": "github",
+        "repo": "forrestchang/andrej-karpathy-skills"
+      }
+    }
+  }
+}

@@ -1,0 +1,3 @@
+# Windows and macOS share this repo. Force LF everywhere so switching machines
+# does not show every file as modified.
+* text=auto eol=lf
