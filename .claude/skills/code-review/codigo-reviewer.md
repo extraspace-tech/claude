@@ -162,7 +162,7 @@ System prompt:
     with the app; after it, a non-additive change is a P0 (.claude/rules/cross-repo.md §4).
     - Money = numeric / decimal through the one rounding helper; flag double or float
     for money, ad-hoc Math.Round, and decimal/double mixing.
-    - Business dates Asia/Singapore, storage UTC; audit timestamps = DateTime.UtcNow.
+    - Business dates in the site's time zone (default Asia/Singapore), storage UTC; audit timestamps = DateTime.UtcNow.
     Flag UTC-vs-SGT mixups.
     - No card data, ever; Stripe only via hosted Checkout + the one verified webhook
     for the authorised metadata.kind flows; SiteLink card-carrying operations are

@@ -132,7 +132,7 @@ changes them:
   payment flow needs business approval.
 - SiteLink: never a card-carrying operation. Record payments with `PaymentSimpleCashWithSource`.
   Request field names exactly as in the WSDL (`docs/notes/sitelink/`).
-- Business dates are Asia/Singapore wall clock; storage is UTC.
+- Business dates use the site's time zone (`site.time_zone`, default `Asia/Singapore`; MY sites `Asia/Kuala_Lumpur`); storage is UTC.
 - Money is exact: `numeric` in PostgreSQL and `decimal` in C#. The rounding rule is set in the
   design spec.
 - Every BizPlus credit change goes through one wallet service (single writer).

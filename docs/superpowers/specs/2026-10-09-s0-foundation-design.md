@@ -58,6 +58,12 @@ House rules for the layout:
 
 - **One feature = one folder.** It holds the feature's controllers, services, EF entity configuration and jobs.
 - **A feature never touches another feature's tables.** It calls that feature's service. Example: Bookings asks the Credits wallet service to spend credits.
+- **Each feature has a public face: `Features/<Feature>/Contracts/`** (its service interfaces and the DTOs they take and return). Another feature may use only that folder. Entities, EF configurations, controllers and service classes stay inside the feature.
+- **An architecture test enforces this** (`tests/ExtraSpace.Api.Tests/Architecture/`; library picked in the plan, ArchUnitNET or NetArchTest). It fails the build when:
+  - code in feature X uses any type of feature Y outside `Y.Contracts` (this also catches `db.Set<YEntity>()`, because it needs Y's entity type)
+  - `Platform/` or `Integrations/` depends on `Features/`
+  - a controller injects the `DbContext` (controllers call a service)
+  - `ExtraSpace.Engines` references EF Core, ASP.NET Core or `System.Net.Http`
 - **Endpoints are MVC `[ApiController]` controllers.** Controllers stay thin and call a service. Mobile controllers route under `api/v1/...`; admin controllers live in `Features/<Feature>/Admin/` and route under `admin/api/...`.
 - **One `DbContext`.** Each feature registers only its own entity configurations (`IEntityTypeConfiguration<T>` classes in its folder).
 - **No repository layer.** Services use the `DbContext` directly.
@@ -121,7 +127,7 @@ The Flutter app sends `X-App-Platform: ios|android|web` and `X-App-Version: <sem
 - No `double` or `float` for money anywhere.
 - Conversion to Stripe integer cents happens only in the Stripe integration (S1).
 - The clock is .NET `TimeProvider`, injected everywhere. `DateTime.Now` and `DateTime.UtcNow` are banned in code, except inside `TimeProvider` registration.
-- Business dates use the site's time zone (S1 adds `site.time_zone`, default `Asia/Singapore`).
+- Business dates use the **site's time zone** (S1 adds `site.time_zone`, an IANA name, default `Asia/Singapore`; Malaysian sites use `Asia/Kuala_Lumpur`). Both are UTC+8 with no daylight saving, but code never assumes that: it converts through the site's zone. Storage is UTC.
 
 ## 5. Data
 
@@ -284,6 +290,7 @@ The Flutter app sends `X-App-Platform: ios|android|web` and `X-App-Version: <sem
   - an audit row on admin writes
   - the last Owner cannot be removed
   - the `xmin` conflict → 409
+  - the architecture test (§3)
 - Admin UI: type-check + build in CI. Playwright smoke tests start in S1.
 - Before S0 is called done, the `dev-walker` agent walks the staging flows in §11.
 
@@ -312,6 +319,9 @@ The Flutter app sends `X-App-Platform: ios|android|web` and `X-App-Version: <sem
 
 ## 13. Notes for later sub-projects
 
+- **S1 outside-call rules (owner, 2026-10-09):**
+  - Every outside call (SiteLink, Stripe, SES) has a timeout, a limited retry with backoff for safe reads only, and a circuit breaker, so a slow SiteLink cannot hold the request threads of the whole app. HTTP clients use `Microsoft.Extensions.Http.Resilience`; the SiteLink SOAP client gets the same limits on its binding.
+  - Every side effect after a payment (for example: Stripe paid → record the payment in SiteLink with `PaymentSimpleCashWithSource`, issue credits, send the receipt) runs as an idempotent job, and the record that triggers it is saved in the same transaction as the payment. How: an outbox row in our own table that a Hangfire job picks up, or Hangfire enlisted in that transaction; S1 picks one after checking what `Hangfire.PostgreSql` supports (not verified yet). A failure retries; it is never lost, and a repeat changes nothing. The S1 spec names the idempotency key per step and what staff see when the retries run out.
 - S1 adds: SiteLink tenant linking inside "check the code" (only for the verified email, matched case-insensitively), `site.time_zone` and currency per site, the SiteLink cache decision (in-memory vs ElastiCache), Stripe, S3 if needed.
 - Every later spec lists which demo spec rules it keeps and which it changes, and checks the demo for new commits first (`docs/notes/demo-backend/sync-log.md`).
 - Every later spec also reads the client's artifact notes (`docs/notes/client-artifacts/`). Where they disagree with the demo, it lists the conflict for the PM instead of choosing.

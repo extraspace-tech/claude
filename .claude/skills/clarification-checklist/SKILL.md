@@ -27,7 +27,7 @@ Ask these questions before starting any non-trivial implementation. Not every qu
 
 ### Money and time
 - Which values are money? Rounding point (which helper, after which operation)? GST per site?
-- Which dates are business dates (Asia/Singapore) and which are instants (UTC)?
+- Which dates are business dates (the site's time zone) and which are instants (UTC)?
 - Idempotency key for a webhook, cron or retry path?
 
 ### Payments and SiteLink

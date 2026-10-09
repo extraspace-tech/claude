@@ -24,5 +24,5 @@ dotnet run --project ../CMS/src/ExtraSpace.Api        # needs `docker compose up
 2. Compare the failing route with the design spec and our OpenAPI document: they define the expected status and body. The demo spec's feature doc shows the intended business rule.
 3. Validation 400s: the `VALIDATION_ERROR` shape must match spec 00; check the FluentValidation rule against the zod schema in the TS file.
 4. Rounding or amount mismatches: check the rounding helper and the per-site GST.
-5. Time mismatches: a business date computed in UTC instead of Asia/Singapore shifts by 8 hours.
+5. Time mismatches: a business date computed in UTC instead of the site's time zone (Asia/Singapore or Asia/Kuala_Lumpur, both UTC+8) shifts by 8 hours.
 6. Npgsql enum errors: the PG enum must be mapped on the data source / model builder; compare as strings in SQL.

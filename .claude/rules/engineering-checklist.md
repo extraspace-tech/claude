@@ -28,7 +28,7 @@ Always loaded. Every item below was a real defect in the Porsche workspace, foun
 - When money goes into a frozen snapshot, state the invariant between the snapshot field and the live field, and keep both sides of a shared formula in one helper.
 - An aggregate that answers "does one already exist?" must exclude the caller's own row.
 - Every webhook and cron handler is idempotent: a duplicate delivery changes nothing the second time. Say which column or key proves it.
-- Business dates are Asia/Singapore wall clock; storage is UTC. Never `DateTime.Now`. A `DateTime` gets a `Z` in JSON only when its Kind is Utc; a value read from the database is Kind Unspecified unless you set it.
+- Business dates use the site's time zone (`site.time_zone`, default `Asia/Singapore`; MY sites `Asia/Kuala_Lumpur`); storage is UTC. Never `DateTime.Now`. A `DateTime` gets a `Z` in JSON only when its Kind is Utc; a value read from the database is Kind Unspecified unless you set it.
 
 ## 4. Schema and contracts
 

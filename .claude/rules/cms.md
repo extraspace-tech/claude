@@ -13,7 +13,7 @@ Always loaded. Applies to every file under `../CMS/`. Rewritten 2026-10-09 after
 ## House rules (design defaults; only the owner changes them)
 
 1. Money is exact: `numeric` in PostgreSQL, `decimal` in C#. Never `double` or `float` for money. One rounding helper; the rule is set in the design spec.
-2. Business dates are Asia/Singapore wall clock; storage is UTC. Never `DateTime.Now`.
+2. Business dates use the site's time zone (`site.time_zone`, default `Asia/Singapore`; MY sites `Asia/Kuala_Lumpur`); storage is UTC. Never `DateTime.Now`.
 3. Never handle card data. Stripe only via hosted Checkout + one signature-verified webhook. A new payment flow needs explicit business approval.
 4. Never call a SiteLink card-carrying operation; record payments with `PaymentSimpleCashWithSource`. SiteLink request field names exactly as in the WSDL (`docs/notes/sitelink/`).
 5. Every BizPlus credit change goes through the wallet service (single writer).
@@ -21,6 +21,8 @@ Always loaded. Applies to every file under `../CMS/`. Rewritten 2026-10-09 after
 7. Every endpoint that reads or changes a customer's data checks ownership. Never trust a client-reported amount; the server prices everything.
 8. Configuration values come from the environment or a secret store, never from a committed file.
 9. Write tests with the code (xUnit). Where a spec feature doc has an acceptance table we keep, port it as `[Theory]` data.
+10. A feature uses another feature only through its `Features/<Feature>/Contracts/` folder (service interfaces + DTOs), never its entities or tables. The architecture test in `tests/ExtraSpace.Api.Tests/Architecture/` enforces it; never weaken that test to make a build pass.
+11. Outside calls (SiteLink, Stripe, SES) have a timeout, a circuit breaker and retries for safe reads only. Side effects after a payment run as idempotent jobs whose trigger is saved in the payment's own transaction (outbox row or enlisted Hangfire job; S1 decides).
 
 ## Conventions to decide in the design spec (write the answer here)
 

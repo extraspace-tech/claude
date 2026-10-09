@@ -46,3 +46,5 @@ The user corrected the setup on 2026-10-09. The setup had called `Backend Demo/b
 - Never treat old code as a design to copy: it has many security defects.
 
 Related: [[project-setup-owed]], [[project-workspace-layout]].
+
+2026-10-09: monolith reviewed and kept. Guards added: feature `Contracts/` folders + architecture test (S0), outside-call limits + payment side effects as idempotent jobs (S1), time zone per site. Details: `.claude/rules/cross-repo.md` §4.
