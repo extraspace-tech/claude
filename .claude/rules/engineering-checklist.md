@@ -4,17 +4,18 @@ Always loaded. Every item below was a real defect in the Porsche workspace, foun
 
 ## 1. Look outside the lines you edited
 
-- For every method signature, column, enum value, DTO field or "mode" flag you change or start writing: grep the C# repo AND the Node reference for its callers and readers. The regression hides in the door you did not touch. In your report, list each reader you checked and why it needed no change.
+- For every method signature, column, enum value, DTO field or "mode" flag you change or start writing: grep the C# repo for its callers and readers (and the Flutter app when an API shape changes). The regression hides in the door you did not touch. In your report, list each reader you checked and why it needed no change.
 - When you add a branch to a **shared add/update method**, say what the update path does. A branch that ignores the update flag is the default failure.
 - When a path deliberately **skips guards**, list what each skipped guard protected and re-provide the ones that matter.
 - A request that accepts "either A or B" must still accept the payload its own GET returns.
-- Before you say the reference does or lacks something: read the spec doc AND the cited TS file. The spec is a snapshot of 2026-10-08.
+- Extract business rules from a prototype's **code**, not its rendered page. A rendered read of the client's ES App artifact got 4 rules wrong (2026-10-09).
+- Before you say the demo or the old system does or lacks something: read the spec doc AND the cited TS file (demo), or `docs/notes/old-backend/` AND the cited C# file (old system). The spec is a snapshot of 2026-10-08.
 
 ## 2. EF Core and transactions
 
 - Every `BeginTransactionAsync` needs a `CommitAsync` on every success path. A missing commit rolls back silently at dispose: green build, no exception.
 - Never `Update()` a row you added with `AddAsync` in the same unit of work (Added → Modified fails the save).
-- Never full-row `Update()` a row that another process also writes (the Node service during cutover, the Stripe webhook). Set only your columns on the tracked row.
+- Never full-row `Update()` a row that another process also writes (a background job, the Stripe webhook). Set only your columns on the tracked row.
 - After a lost race, clear any stale id left on a tracked entity before a later save writes it back.
 - An unbounded `.ToListAsync()` followed by `.Contains` becomes a giant IN list. Compose an `IQueryable` subquery unless a filter caps the list. On .NET 10, `.Contains` on an **enum array** inside an EF expression tree fails to translate.
 - An anonymous `.Select(x => new { … })` only carries the columns it names.
@@ -22,7 +23,7 @@ Always loaded. Every item below was a real defect in the Porsche workspace, foun
 
 ## 3. Money, time and idempotency
 
-- Validate the value **as it will be stored** (after rounding), never the raw request value. Rounding = JS half-up on `double`.
+- Validate the value **as it will be stored** (after rounding), never the raw request value. Money is `decimal`; round only through the one rounding helper (rule set in the design spec).
 - When money moves between records, list every lifecycle state of that money and say what happens to each.
 - When money goes into a frozen snapshot, state the invariant between the snapshot field and the live field, and keep both sides of a shared formula in one helper.
 - An aggregate that answers "does one already exist?" must exclude the caller's own row.

@@ -1,10 +1,15 @@
 {
   "permissions": {
-    "allow": [],
+    "allow": [
+      "Bash(python3 -I -c 'import json;d=json.load\\(open\\(\".mcp.json\"\\)\\);print\\(list\\(d[\"mcpServers\"]\\)\\)')",
+      "Bash(git check-ignore *)",
+      "Bash(claude mcp *)"
+    ],
     "additionalDirectories": [
       "../CMS",
       "../API",
-      "../Backend Demo"
+      "../Backend Demo",
+      "../../Extra Space old"
     ]
   },
   "model": "fable",
@@ -16,7 +21,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=$(jq -r '.tool_input.file_path // empty'); ws=$(cd \"$CLAUDE_PROJECT_DIR/..\" && pwd); case \"$f\" in \"$ws/Backend Demo\"/*) echo \"Blocked: Backend Demo is the client's reference repo and is read-only. Copy what you need into Claude/docs/ instead.\"; exit 2;; esac; case \"$f\" in \"$ws\"/CMS/*|\"$ws\"/API/*) ;; *) exit 0;; esac; case \"$f\" in */.claude/*|*/.cursor/*|*/.agents/*) echo \"Blocked: tool folders (.claude, .cursor, .agents) belong in the workspace root Claude/, never inside a code repo.\"; exit 2;; esac; b=$(basename \"$f\"); case \"$b\" in CLAUDE*.md|AGENTS.md|GEMINI.md|.claude*|.cursor*|.mcp.json|skills-lock.json) echo \"Blocked: $b belongs in the workspace root (Claude/.claude or Claude/.cursor), never inside a code repo.\"; exit 2;; esac; case \"$b\" in *.md) [ -e \"$f\" ] || { echo \"Blocked: new markdown inside a code repo. Put notes, plans and handovers under Claude/docs/.\"; exit 2; };; esac; exit 0",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); ws=$(cd \"$CLAUDE_PROJECT_DIR/..\" && pwd); case \"$f\" in \"$ws/Backend Demo\"/*) echo \"Blocked: Backend Demo is the client's reference repo and is read-only. Copy what you need into Claude/docs/ instead.\"; exit 2;; esac; case \"$f\" in \"$(dirname \"$ws\")/Extra Space old\"/*) echo \"Blocked: Extra Space old is the client's old production code (live secrets committed) and is read-only. Copy what you need into Claude/docs/ instead.\"; exit 2;; esac; case \"$f\" in \"$ws\"/CMS/*|\"$ws\"/API/*) ;; *) exit 0;; esac; case \"$f\" in */.claude/*|*/.cursor/*|*/.agents/*) echo \"Blocked: tool folders (.claude, .cursor, .agents) belong in the workspace root Claude/, never inside a code repo.\"; exit 2;; esac; b=$(basename \"$f\"); case \"$b\" in CLAUDE*.md|AGENTS.md|GEMINI.md|.claude*|.cursor*|.mcp.json|skills-lock.json) echo \"Blocked: $b belongs in the workspace root (Claude/.claude or Claude/.cursor), never inside a code repo.\"; exit 2;; esac; case \"$b\" in *.md) [ -e \"$f\" ] || { echo \"Blocked: new markdown inside a code repo. Put notes, plans and handovers under Claude/docs/.\"; exit 2; };; esac; exit 0",
+            "shell": "bash"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__P-(dev|prod-my)__mysql_query",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "s=$(jq -r '.tool_input.sql // empty' | tr '\\n\\r\\t' '   ' | sed -E 's#/\\*[^*]*\\*+([^/*][^*]*\\*+)*/# #g; s/^[[:space:]]+//; s/[[:space:];]+$//'); w=$(printf '%s' \"$s\" | awk '{print toupper($1)}'); case \"$w\" in SELECT|SHOW|DESCRIBE|DESC|EXPLAIN|WITH) ;; *) echo \"Blocked: this MySQL MCP points at an OLD PRODUCTION database (SG or MY) and is read-only. Allowed: SELECT, SHOW, DESCRIBE, EXPLAIN, WITH.\" >&2; exit 2;; esac; case \"$s\" in *';'*) echo \"Blocked: one statement per call on the production database.\" >&2; exit 2;; esac; printf '%s' \"$s\" | grep -qiE 'into[[:space:]]+(out|dump)file|for[[:space:]]+(update|share)|lock[[:space:]]+in[[:space:]]+share' && { echo \"Blocked: no file output or row locks on the production database.\" >&2; exit 2; }; exit 0",
             "shell": "bash"
           }
         ]

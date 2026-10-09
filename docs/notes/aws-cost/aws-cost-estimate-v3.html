@@ -1,0 +1,214 @@
+<title>Platform AWS Cost Estimate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: one reading column; the budget figures first, then the usage it is sized on, the itemised production and staging tables, the plan to tune costs down, and exclusions. */
+  :root {
+    --bg: #f6f8f8;
+    --surface: #ffffff;
+    --fg: #17242a;
+    --muted: #55666d;
+    --rule: #d8e0e2;
+    --accent: #0f6273;
+    --accent-soft: #e3f0f2;
+    --good: #2e7d4f;
+    --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1719; --surface: #152126; --fg: #e3ecee; --muted: #9db0b6;
+      --rule: #29393f; --accent: #6cc3d3; --accent-soft: #1b3339; --good: #79c99a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1719; --surface: #152126; --fg: #e3ecee; --muted: #9db0b6;
+    --rule: #29393f; --accent: #6cc3d3; --accent-soft: #1b3339; --good: #79c99a;
+    color-scheme: dark;
+  }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: var(--font-body); font-size: 15px; line-height: 1.6;
+    padding-inline: 16px; padding-block: 40px 64px;
+  }
+  main { max-width: 860px; margin: 0 auto; display: grid; gap: 40px; }
+  header { display: grid; gap: 10px; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.2; }
+  h1 { font-size: clamp(28px, 5vw, 38px); }
+  h2 { font-size: 22px; }
+  p { margin: 0; max-width: 68ch; }
+  .lede { color: var(--muted); font-size: 16px; }
+  section { display: grid; gap: 14px; }
+  .figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .figure { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px; display: grid; gap: 4px; align-content: start; }
+  .figure.total { border-color: var(--accent); background: var(--accent-soft); }
+  .figure .label { font-size: 13px; color: var(--muted); }
+  .figure .value { font-family: var(--font-mono); font-size: 26px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .figure .sub { font-size: 12px; color: var(--muted); }
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td .spec { display: block; font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+  tr.total td { font-weight: 600; border-bottom: 0; background: var(--accent-soft); }
+  td.save { color: var(--good); }
+  ul, ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 70ch; }
+  .note { font-size: 13px; color: var(--muted); }
+  .assumptions { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; display: grid; gap: 8px; }
+  code { font-family: var(--font-mono); font-size: .92em; }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">Infrastructure estimate · Singapore + Malaysia · AWS Singapore (ap-southeast-1)</div>
+    <h1>Monthly AWS cost for the new platform</h1>
+    <p class="lede">The new platform is one application that serves Singapore and Malaysia together: the mobile app API, the staff admin, BizPlus, Cowork and the background jobs, with a PostgreSQL database. It runs on AWS in Singapore, with a production environment and a staging environment for testing. It is sized on the real usage of today's systems in both countries. Prices are in US dollars, before tax.</p>
+  </header>
+
+  <section aria-label="Summary">
+    <div class="figures">
+      <div class="figure total">
+        <span class="label">Monthly budget to approve</span>
+        <span class="value">≈ US$500</span>
+        <span class="sub">launch size plus a 15% buffer for unknowns</span>
+      </div>
+      <div class="figure">
+        <span class="label">Launch cost</span>
+        <span class="value">US$437</span>
+        <span class="sub">production US$317 + staging US$121</span>
+      </div>
+      <div class="figure">
+        <span class="label">Expected after tuning</span>
+        <span class="value">US$270–330</span>
+        <span class="sub">after 1–2 months of real measurements</span>
+      </div>
+    </div>
+    <p class="note">At launch size the yearly cost is about US$5,250, and the yearly budget with the buffer is about US$6,040. Running a separate copy of production per country, as the current system does, would roughly double the production cost.</p>
+  </section>
+
+  <section>
+    <h2>Why we launch larger than today's usage needs</h2>
+    <p>Today's traffic is small (see the next section), but the new BizPlus and Cowork features have no usage history yet, and memory is the first thing to run short on small servers. So production starts one size up, with room to spare. Once the platform has run for 1–2 months, we size it to the measured load. Making servers smaller is a simple change; the database needs a short restart.</p>
+    <p>The 15% buffer covers what this estimate cannot know yet: log volume, internet data transfer, extra database CPU in busy periods, and the real load of BizPlus and Cowork.</p>
+  </section>
+
+  <section>
+    <h2>Usage the estimate is sized on</h2>
+    <p>Measured on 9 October 2026 from today's production databases in both countries. Only monthly counts were read, no customer records. BizPlus and Cowork are not in today's systems, so their load is covered by the larger launch size and the buffer.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Measure</th><th class="num">Singapore</th><th class="num">Malaysia</th><th class="num">Together</th></tr></thead>
+        <tbody>
+          <tr><td>Members (all / active status)</td><td class="num">9,097 / 4,865</td><td class="num">1,712 / 882</td><td class="num">10,809 / 5,747</td></tr>
+          <tr><td>Members paying in a month</td><td class="num">~2,850</td><td class="num">~490</td><td class="num">~3,340</td></tr>
+          <tr><td>In-app payments per month</td><td class="num">~3,630</td><td class="num">~770</td><td class="num">~4,400</td></tr>
+          <tr><td>App sign-ins per month</td><td class="num">~2,300</td><td class="num">~560</td><td class="num">~2,860</td></tr>
+          <tr><td>SiteLink calls per month (mostly system jobs)</td><td class="num">~330,000</td><td class="num">~188,000</td><td class="num">~518,000</td></tr>
+          <tr><td>Busiest hour of SiteLink calls in a recent month</td><td class="num">9,772</td><td class="num">4,080</td><td class="num">~3.9 per second</td></tr>
+          <tr><td>Business data in the database</td><td class="num">1.2 GB</td><td class="num">0.13 GB</td><td class="num">~1.3 GB</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Singapore figures are the October 2025 to July 2026 average. Singapore in-app payments stopped in August 2026, when the current system's autopay was switched off, so later months would understate demand. Malaysia figures are the 12-month average.</p>
+  </section>
+
+  <section>
+    <h2>Production</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Item</th><th>What it is for</th><th class="num">Launch size<br>US$ / month</th><th class="num">After tuning<br>US$ / month</th></tr></thead>
+        <tbody>
+          <tr><td>App servers<span class="spec">ECS Fargate (ARM), 2 servers: 1 vCPU / 2 GB at launch, 0.5 vCPU / 1 GB after tuning</span></td><td>Run the application. Two copies in two data centres, so one can fail without downtime.</td><td class="num">71.96</td><td class="num">35.98</td></tr>
+          <tr><td>Load balancer<span class="spec">Application Load Balancer</span></td><td>Receives all web and app traffic over HTTPS and shares it between the app servers.</td><td class="num">21.32</td><td class="num">21.32</td></tr>
+          <tr><td>NAT gateway<span class="spec">1 gateway, ~20 GB/month</span></td><td>Lets the app call SiteLink, Stripe and email from one fixed internet address.</td><td class="num">44.25</td><td class="num">44.25</td></tr>
+          <tr><td>Public IP addresses<span class="spec">3 IPv4 addresses</span></td><td>AWS charges for each public internet address (load balancer and gateway).</td><td class="num">10.95</td><td class="num">10.95</td></tr>
+          <tr><td>Database server<span class="spec">RDS PostgreSQL Multi-AZ: db.t4g.medium (4 GB) at launch, db.t4g.small (2 GB) after tuning</span></td><td>Stores all platform data, with a live standby copy in a second data centre.</td><td class="num">148.19</td><td class="num">74.46</td></tr>
+          <tr><td>Database storage and backups<span class="spec">20 GB gp3 (Multi-AZ)</span></td><td>Disk space, and 14 days of automatic backups with point-in-time restore.</td><td class="num">5.52</td><td class="num">5.52</td></tr>
+          <tr><td>Secrets store<span class="spec">Secrets Manager, 12 secrets</span></td><td>Keeps passwords and API keys out of the code, including each country's Stripe keys.</td><td class="num">4.80</td><td class="num">4.80</td></tr>
+          <tr><td>Logs and alerts<span class="spec">CloudWatch, 10 GB logs, 10 alarms</span></td><td>Application logs, and alerts when errors rise or a job fails.</td><td class="num">8.30</td><td class="num">8.30</td></tr>
+          <tr><td>Image registry<span class="spec">ECR, 5 GB</span></td><td>Stores the released versions of the application.</td><td class="num">0.50</td><td class="num">0.50</td></tr>
+          <tr><td>Email sending<span class="spec">SES, ~10,000 emails</span></td><td>Sign-in codes and notifications. US$0.10 per 1,000 emails.</td><td class="num">1.00</td><td class="num">1.00</td></tr>
+          <tr class="total"><td colspan="2">Production total</td><td class="num">316.79</td><td class="num">207.08</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">"After tuning" is the size today's measured usage needs. We move to it only if the first 1–2 months of real measurements show it is enough.</p>
+  </section>
+
+  <section>
+    <h2>Staging</h2>
+    <p>A smaller copy of production. The team tests every change here before it goes live.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Item</th><th>Size</th><th class="num">US$ / month</th></tr></thead>
+        <tbody>
+          <tr><td>App server</td><td><code>1 × 0.5 vCPU / 1 GB</code></td><td class="num">17.99</td></tr>
+          <tr><td>Load balancer</td><td><code>ALB</code></td><td class="num">21.32</td></tr>
+          <tr><td>NAT gateway</td><td><code>1 gateway, ~5 GB</code></td><td class="num">43.37</td></tr>
+          <tr><td>Public IP addresses</td><td><code>3 IPv4</code></td><td class="num">10.95</td></tr>
+          <tr><td>Database server</td><td><code>db.t4g.micro, single data centre</code></td><td class="num">18.25</td></tr>
+          <tr><td>Database storage</td><td><code>20 GB gp3</code></td><td class="num">2.76</td></tr>
+          <tr><td>Secrets store</td><td><code>8 secrets</code></td><td class="num">3.20</td></tr>
+          <tr><td>Logs and alerts</td><td><code>3 GB logs, 5 alarms</code></td><td class="num">2.69</td></tr>
+          <tr><td>Email sending</td><td><code>~500 emails</code></td><td class="num">0.05</td></tr>
+          <tr class="total"><td colspan="2">Staging total</td><td class="num">120.57</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>How the cost comes down after launch</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Step</th><th>When</th><th class="num">US$ / month</th></tr></thead>
+        <tbody>
+          <tr><td>Size production to measured usage (smaller app servers and database)</td><td>After 1–2 months, if the measurements allow it</td><td class="num save">−109.71</td></tr>
+          <tr><td>Run staging without a NAT gateway</td><td>Any time, unless SiteLink requires an allow-listed address for staging</td><td class="num save">−43.37</td></tr>
+          <tr><td>Reserve the production database for 1 year, no upfront payment</td><td>Only after the database size is settled</td><td class="num save">−15.84 to −31.03</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">With all three steps the total is about US$270 per month; with only the first, about US$330. If BizPlus and Cowork turn out busier than expected, production stays at launch size and the total stays near US$437. AWS Savings Plans can lower the app server cost further for a 1- or 3-year commitment; that is not counted here.</p>
+  </section>
+
+  <section>
+    <h2>Costs that may come later</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Item</th><th>When</th><th class="num">US$ / month</th></tr></thead>
+        <tbody>
+          <tr><td>One more app server (1 vCPU / 2 GB)</td><td>If traffic grows beyond what two servers handle</td><td class="num">+35.98 each</td></tr>
+          <tr><td>Cache (ElastiCache Valkey, cache.t4g.micro)</td><td>Only if testing shows the SiteLink data needs a shared cache. One node, or two for failover.</td><td class="num">+14.02 / +28.03</td></tr>
+          <tr><td>File storage (S3)</td><td>From the facility-booking phase, for images and documents</td><td class="num">priced then</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Not included</h2>
+    <ul>
+      <li>Tax on the AWS invoice.</li>
+      <li>An AWS Support plan, if one is wanted.</li>
+      <li>Domain names and DNS hosting.</li>
+      <li>Third-party fees: SiteLink, Stripe transaction fees, Apple and Google developer accounts, and GitHub if the code repository becomes private.</li>
+      <li>Staff sign-in uses the company's Microsoft 365 accounts. No extra licence is expected; to be confirmed with IT.</li>
+      <li>Hosting Malaysian data in Singapore is assumed to be acceptable under Malaysia's data protection rules. To be confirmed by the business.</li>
+    </ul>
+  </section>
+
+  <section class="assumptions" aria-label="Assumptions and sources">
+    <h2>Assumptions and sources</h2>
+    <ul>
+      <li>One platform serves both countries; each site carries its own currency and time zone. Region Singapore (<code>ap-southeast-1</code>). On-demand prices. Everything runs 24 hours a day, counted as 730 hours per month.</li>
+      <li>Usage as measured on today's systems; BizPlus and Cowork are covered by the launch size and the 15% buffer. The final bill follows real usage.</li>
+      <li>All unit prices come from AWS's public price list for Singapore, versions published between 11 September and 8 October 2026, read on 9 October 2026. AWS may change prices.</li>
+    </ul>
+  </section>
+</main>

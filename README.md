@@ -19,7 +19,7 @@ Extra Space/
       settings.json  settings.local.json hooks, plugins, permissions (sibling dirs allowed)
       dev-ports                          one local port per line; the Stop hook reaps orphaned apps on them
       agents/                            code-reviewer, dev-walker (implementer is global: ~/.claude/agents)
-      rules/                             model-routing, cross-repo, engineering-checklist, cms, backend-demo
+      rules/                             model-routing, cross-repo, engineering-checklist, cms, backend-demo, old-backend
       skills/                            clarification-checklist, code-review, backend-spec, api-debug-and-run
       scripts/                           plan gate scripts (Cursor hybrid workflow, not the default)
       memory/                            auto-memory (linked from ~/.claude/projects/…/memory)
@@ -28,8 +28,11 @@ Extra Space/
     .vscode/                             launch.json + tasks.json for the C# API (placeholders until phase 1)
     docs/                                plans, Handover, migrations, postman, superpowers, notes, meetings
   CMS/                                   extraspace-tech/cms (main) — the NEW C# repo: CMS + API. PUBLIC.
-  Backend Demo/backend/                  extraspace-tech/backend (main) — Node reference + handover spec. READ ONLY.
-  API/                                   empty, purpose not decided (2026-10-09)
+  Backend Demo/backend/                  extraspace-tech/backend (main) — the PM's Node prototype + handover spec. READ ONLY.
+  API/                                   extraspace-tech/es-api (main) — README only, purpose not decided (2026-10-09)
+Extra Space old/                         (outside Extra Space/) — the OLD production system. READ ONLY.
+  extraspace-backend/                    sgcodigo/extraspace-backend — .NET Core 3.1 + MySQL. 🔴 live secrets committed.
+  ExtraSpaceAPI/  ExtraSpaceCMS/         non-git snapshot of the same code (newer EarnPoints notes)
 ```
 
 Unlike Porsche-AI, the code repos are **siblings** of the context repo, not children. Claude reaches
@@ -44,7 +47,8 @@ Settings, rules, hooks, MCP servers, and auto-memory are all keyed to this folde
 **Clean root.** AI tooling lives only in `.claude/` and `.cursor/` (plus the gitignored `.mcp.json`).
 Never create `.agents/`, `AGENTS.md`, a `CLAUDE.md`, or any tool folder inside `../CMS` or `../API`,
 and never add a new `.md` inside a code repo — notes, plans, handovers, and migration scripts go
-under `docs/`. A PreToolUse hook enforces this and also blocks every edit under `../Backend Demo`.
+under `docs/`. A PreToolUse hook enforces this and also blocks every edit under `../Backend Demo`
+and `../../Extra Space old`.
 The client's own `CLAUDE.md` / `.claude/backend-spec/` / `.agents/` inside `Backend Demo/backend`
 stay as they are.
 

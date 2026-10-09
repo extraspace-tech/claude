@@ -1,16 +1,16 @@
 ---
 name: clarification-checklist
-description: Questions to ask before starting any non-trivial implementation in the Extra Space C# repo (spec doc, scope, clients, data model and schema freeze, money and time, payments and SiteLink, auth, jobs). Use before building any feature, endpoint, or entity change; skip questions that clearly do not apply.
+description: Questions to ask before starting any non-trivial implementation in the Extra Space C# repo (spec doc, scope, clients, data model, money and time, payments and SiteLink, auth, jobs). Use before building any feature, endpoint, or entity change; skip questions that clearly do not apply.
 ---
 
 # Clarification Checklist
 
-Ask these questions before starting any non-trivial implementation. Not every question applies to every task — skip ones clearly irrelevant — but when in doubt, ask. First check the Node reference and the spec; many answers are already there (memory `feedback-reference-first`).
+Ask these questions before starting any non-trivial implementation. Not every question applies to every task — skip ones clearly irrelevant — but when in doubt, ask. First check the design spec, the demo spec, `docs/notes/client-artifacts/` and `docs/notes/old-backend/`; many answers are already there. Where the demo and the client's artifacts disagree, ask the PM which one wins (cross-repo §4, open decision 8) (memory `feedback-reference-first`).
 
 ### Spec and reference
 - Which `features/NN-*.md` doc covers this? Which TS files does it cite? Have both been read?
-- Is this a straight re-implementation of the reference behaviour, or does the owner want **new logic** here? If new: what exactly changes, and is it written in the plan and `.claude/rules/cross-repo.md`?
-- Which port-plan phase does this belong to, and are its dependencies built?
+- Which demo spec rules does this keep, and which does it change? Is each change written in the plan?
+- Which implementation-plan phase does this belong to, and are its dependencies built?
 
 ### Clients
 - Which client reads this (Flutter `/api/v1/*`, admin UI `/admin/api/*`, cron, Stripe webhook)? Does the route, JSON field name, casing, status code or error `code` change? (Additive only unless the owner decides otherwise.)
@@ -22,11 +22,11 @@ Ask these questions before starting any non-trivial implementation. Not every qu
 
 ### Data model
 - Which tables? Exact DDL in `reference/schema.sql` (constraints, enums, EXCLUDE ranges). Any additive migration needed? (`docs/migrations/`, run by hand.)
-- Soft delete or hard delete for this table? (No global convention in the reference; check per table.)
-- For any computed or display field: what is the exact source column or formula in the reference?
+- Soft delete or hard delete for this table? (Decided per table in the design spec.)
+- For any computed or display field: what is the exact source column or formula?
 
 ### Money and time
-- Which values are money? Rounding point (JS half-up, after which operation)? GST per site?
+- Which values are money? Rounding point (which helper, after which operation)? GST per site?
 - Which dates are business dates (Asia/Singapore) and which are instants (UTC)?
 - Idempotency key for a webhook, cron or retry path?
 
@@ -38,4 +38,4 @@ Ask these questions before starting any non-trivial implementation. Not every qu
 - Anonymous key, customer JWT or admin session? Which permission string for admin actions? Audit log row?
 
 ### Jobs
-- Cron or in-process `BackgroundService`? Redis lock key (must match the Node key exactly during cutover)?
+- Cron or in-process `BackgroundService`? How does it run only once across app instances, and what makes it idempotent?

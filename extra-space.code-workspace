@@ -4,8 +4,9 @@
   "folders": [
     { "name": "Claude (context, start here)", "path": "." },
     { "name": "CMS (new C# repo, PUBLIC)", "path": "../CMS" },
-    { "name": "Backend Demo (Node reference, read-only)", "path": "../Backend Demo/backend" },
-    { "name": "API (empty)", "path": "../API" }
+    { "name": "Backend Demo (PM prototype, read-only)", "path": "../Backend Demo/backend" },
+    { "name": "Old production (read-only, secrets committed)", "path": "../../Extra Space old/extraspace-backend" },
+    { "name": "API (es-api, purpose open)", "path": "../API" }
   ],
   "settings": {
     "files.eol": "\n"

@@ -26,8 +26,8 @@ Work in this order:
    `.claude/memory/MEMORY.md` and read every topic file whose line matches the task — it holds traps,
    fixtures and past decisions that are not in the code.
 2. **Read the code.** Every file you expect to change, plus the callers and readers of every symbol
-   you will change. Grep the C# repo AND the Node reference (`../Backend Demo/backend`), not only
-   the file you edit: the reference holds the behaviour the port must keep.
+   you will change. Grep the C# repo, not only the file you edit. For the intended
+   business rule, read the demo spec feature doc the plan cites (`../Backend Demo/backend`, read only).
 3. **Post your edit plan before editing:** files and methods, the gaps or mistakes you found in the
    brief and how you will handle each, and the risks. Then continue without waiting, unless item 5
    applies.
@@ -67,14 +67,14 @@ Architecture and planning happened elsewhere. Implement the plan exactly as writ
 
 - `.claude/CLAUDE.md` is the authoritative workspace convention document. Read and follow it exactly.
 - The workspace root (`Claude/`) is the context repo. The code repos are its siblings: `../CMS` (the
-  C# repo you may edit) and `../Backend Demo/backend` (the Node reference — READ ONLY, never edit).
+  C# repo you may edit) and `../Backend Demo/backend` (the demo, a feature reference — READ ONLY, never edit).
   Each plan names the repos it targets. Never edit a repo the plan does not name.
 - Do NOT commit or push. Leave all changes uncommitted for review.
 - Verification = `dotnet build` of every csproj the plan touches with 0 errors, plus the xUnit tests
   the plan names (the spec ships acceptance tables per feature; port them when the plan says so).
 - SQL migrations: write the script into `docs/migrations/`, never run it. The developer runs
-  migrations manually. The schema is PostgreSQL and is frozen by the spec
-  (`../Backend Demo/backend/.claude/backend-spec/reference/schema.sql`): no renames, no drops.
+  migrations manually. The schema is PostgreSQL and is ours
+  (EF Core migrations in the monolith repo); the demo's schema is only a reference.
 - 🔴 The `postgres-dev` MCP server (when installed) is read-only and points at the **staging**
   database. Use it to verify schema and data instead of guessing. Any write you make through a
   locally running API also lands on that database, so do not call POST, PUT, PATCH or DELETE

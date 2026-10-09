@@ -154,14 +154,14 @@ System prompt:
     Verification = dotnet build + dotnet test + manual Swagger + postgres-dev data
     checks (read-only MCP, when installed).
     - SQL migrations are run MANUALLY by the developer. The PostgreSQL schema is
-    frozen by the spec (reference/schema.sql): additive only. Migration files live in
+    ours (EF Core migrations); after a table holds production data, changes are additive or come with a data migration. Migration files live in
     docs/migrations/ at the workspace root, in the context repo, outside the code
     repos — their absence from a code-repo diff is expected.
     - Routes, JSON field names/casing, status codes and error codes are a contract
-    with the Flutter app and the admin UI; a non-additive change is a P0 unless the
-    plan records the owner's decision in .claude/rules/cross-repo.md.
-    - Money = double precision with JS half-up rounding (Math.Floor(x + 0.5)); flag
-    bare Math.Round and decimal/double mixing.
+    with our Flutter app and the admin UI. Before the first store release they change
+    with the app; after it, a non-additive change is a P0 (.claude/rules/cross-repo.md §4).
+    - Money = numeric / decimal through the one rounding helper; flag double or float
+    for money, ad-hoc Math.Round, and decimal/double mixing.
     - Business dates Asia/Singapore, storage UTC; audit timestamps = DateTime.UtcNow.
     Flag UTC-vs-SGT mixups.
     - No card data, ever; Stripe only via hosted Checkout + the one verified webhook

@@ -1,0 +1,1419 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>ExtraSpace Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: a self-storage admin console, cloned from a product screenshot.
+     Single, deliberately dark UI — this is the product's fixed dark skin. */
+  :root{
+    --bg:#0a0c13;
+    --shell:#0c0e17;
+    --panel:#11141f;
+    --elevated:#171a26;
+    --border:#242838;
+    --border-soft:#1b1e2b;
+    --fg:#e7e8ee;
+    --fg-muted:#8d90a3;
+    --fg-faint:#565a70;
+    --accent:#3b6ef0;
+    --accent-hover:#5680f3;
+    --active-bg:#182142;
+    --active-fg:#c4d2ff;
+    --ok:#6fe3a0;
+    --ok-bg:#113524;
+    --warn:#f0b35c;
+    --warn-bg:#3a2a10;
+    --teal:#14b8a6;
+    --teal-hover:#2dd4bf;
+    --amber:#d97706;
+    --amber-hover:#f59e0b;
+    color-scheme: dark;
+    --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-doc: 'Source Serif 4', Georgia, serif;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body{
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing:antialiased;
+  }
+  button{ font-family:var(--font-ui); }
+
+  .app{
+    display:grid;
+    grid-template-columns: 256px 1fr;
+    grid-template-rows: 84px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ---- top bar ---- */
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    padding: 0 20px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--shell);
+    min-width:0;
+  }
+  .brand-mark{
+    flex:0 0 auto;
+    width:34px; height:34px; border-radius:9px;
+    background: var(--accent);
+    color:#fff; font-weight:700; font-size:15px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .brand-name{
+    font-weight:600; font-size:14.5px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    min-width:0;
+  }
+  .brand-chevron{ flex:0 0 auto; color:var(--fg-faint); margin-left:auto; }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 0 28px;
+    background: var(--shell);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-title{ font-size:26px; font-weight:700; letter-spacing:-0.01em; }
+  .topbar-right{ display:flex; align-items:center; gap:18px; }
+
+  .theme-toggle{
+    display:flex; align-items:center;
+    background: var(--elevated);
+    border:1px solid var(--border);
+    border-radius:9px;
+    padding:3px;
+    gap:2px;
+  }
+  .theme-toggle button{
+    appearance:none; border:none; background:transparent;
+    width:30px; height:28px; border-radius:7px;
+    display:flex; align-items:center; justify-content:center;
+    color: var(--fg-muted);
+    cursor:pointer;
+  }
+  .theme-toggle button.active{ background:#20243a; color:var(--fg); }
+  .theme-toggle button:hover{ color:var(--fg); }
+
+  .profile{
+    display:flex; align-items:center; gap:10px; cursor:pointer;
+    padding:4px 6px; border-radius:9px;
+  }
+  .profile:hover{ background: var(--elevated); }
+  .avatar{
+    width:30px; height:30px; border-radius:50%;
+    background: var(--accent);
+    color:#fff; font-weight:600; font-size:13px;
+    display:flex; align-items:center; justify-content:center;
+    flex:0 0 auto;
+  }
+  .profile-name{ font-size:14px; font-weight:500; white-space:nowrap; }
+  .profile svg{ color:var(--fg-faint); }
+
+  /* ---- sidebar ---- */
+  .sidebar{
+    background: var(--shell);
+    border-right: 1px solid var(--border);
+    padding: 14px 12px 20px;
+    overflow-y:auto;
+  }
+  .nav-group{ display:flex; flex-direction:column; gap:1px; }
+  .nav-label{
+    font-size:11px; font-weight:600; letter-spacing:.07em;
+    color: var(--fg-faint);
+    text-transform:uppercase;
+    padding: 18px 10px 8px;
+  }
+  .nav-item{
+    display:flex; align-items:center; gap:11px;
+    padding:9px 10px; border-radius:8px;
+    color: var(--fg-muted);
+    font-size:14px; font-weight:500;
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .nav-item svg{ flex:0 0 auto; color:var(--fg-faint); }
+  .nav-item:hover{ background: var(--elevated); color: var(--fg); }
+  .nav-item:hover svg{ color: var(--fg-muted); }
+  .nav-item.active{ background: var(--active-bg); color: var(--active-fg); }
+  .nav-item.active svg{ color: var(--active-fg); }
+
+  /* ---- main content ---- */
+  .main{
+    padding: 28px 32px 40px;
+    min-width:0;
+    overflow-x:auto;
+  }
+  .page-section[hidden]{ display:none; }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    overflow:hidden;
+  }
+
+  .panel-toolbar{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding: 18px;
+  }
+  .toolbar-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .search{
+    flex:1; position:relative; min-width:0;
+  }
+  .search svg{
+    position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    color: var(--fg-faint);
+  }
+  .search input{
+    width:100%;
+    background: var(--elevated);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 14px 10px 40px;
+    font-size:14px;
+    color: var(--fg);
+    font-family: var(--font-ui);
+  }
+  .search input::placeholder{ color: var(--fg-faint); }
+  .search input:focus{ outline:none; border-color:#39415e; }
+
+  .btn-new{
+    flex:0 0 auto;
+    display:flex; align-items:center; gap:7px;
+    background: var(--accent);
+    color:#fff; font-weight:600; font-size:14px;
+    border:none; border-radius:9px;
+    padding:10px 16px;
+    cursor:pointer;
+  }
+  .btn-new:hover{ background: var(--accent-hover); }
+  .btn-new:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .btn-teal, .btn-amber{
+    flex:0 0 auto;
+    display:flex; align-items:center; gap:7px;
+    font-weight:700; font-size:14px;
+    border:none; border-radius:9px;
+    padding:10px 16px;
+    cursor:pointer;
+  }
+  .btn-teal{ background:var(--teal); color:#04211d; }
+  .btn-teal:hover{ background:var(--teal-hover); }
+  .btn-amber{ background:var(--amber); color:#2a1400; }
+  .btn-amber:hover{ background:var(--amber-hover); }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+  }
+  thead th{
+    text-align:left;
+    font-weight:500;
+    color: var(--fg-muted);
+    padding: 12px 18px;
+    border-top: 1px solid var(--border-soft);
+    border-bottom: 1px solid var(--border-soft);
+    white-space:nowrap;
+  }
+  tbody td{
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--fg);
+    white-space:nowrap;
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  tbody tr.row-clickable{ cursor:pointer; }
+  tbody tr.row-clickable:hover{ background: rgba(255,255,255,0.03); }
+  td.muted{ color: var(--fg-faint); }
+  td.phone, th.phone{ font-variant-numeric: tabular-nums; }
+  th.chevron-col{ width:32px; }
+  td.chevron-cell{ width:32px; text-align:right; color:var(--fg-faint); }
+  td.rent{ font-variant-numeric: tabular-nums; }
+
+  .badge{
+    display:inline-flex; align-items:center;
+    padding:4px 11px; border-radius:999px;
+    font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  }
+  .badge-ok{ background:var(--ok-bg); color:var(--ok); }
+  .badge-warn{ background:var(--warn-bg); color:var(--warn); }
+
+  .lease-filters{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;
+  }
+  .facility-filter{
+    display:flex; gap:8px; overflow-x:auto; padding-bottom:2px;
+  }
+  .facility-chip{
+    flex:0 0 auto; appearance:none; border:1px solid var(--border); background:var(--elevated);
+    color:var(--fg-muted); font-size:13.5px; font-weight:600; padding:9px 16px; border-radius:999px;
+    cursor:pointer; white-space:nowrap;
+  }
+  .facility-chip:hover{ color:var(--fg); }
+  .facility-chip.active{ background:var(--active-bg); border-color:#39415e; color:var(--active-fg); }
+  .facility-select{
+    flex:0 0 auto; appearance:none; background:var(--elevated); border:1px solid var(--border);
+    color:var(--fg); font-family:var(--font-ui); font-size:13.5px; font-weight:600;
+    padding:9px 34px 9px 16px; border-radius:999px; cursor:pointer; min-width:220px;
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%238d90a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>');
+    background-repeat:no-repeat; background-position:right 12px center; background-size:14px;
+  }
+  .facility-select:focus{ outline:none; border-color:#39415e; }
+
+  @media (max-width: 860px){
+    .app{ grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
+    .brand{ border-right:none; }
+    .sidebar{
+      display:flex; flex-wrap:wrap; gap:4px;
+      border-right:none;
+    }
+    .nav-group{ flex-direction:row; flex-wrap:wrap; }
+    .nav-label{ width:100%; }
+    .main{ padding: 20px 16px 32px; }
+  }
+
+  /* ---- modal system ---- */
+  #modal-root{ position:relative; }
+  .overlay{
+    position:fixed; inset:0; z-index:60;
+    background:rgba(5,6,10,.72);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .modal{
+    background: var(--panel);
+    border:1px solid var(--border);
+    border-radius:18px;
+    width:100%; max-width:420px; max-height:88vh;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+    box-shadow:0 24px 60px rgba(0,0,0,.5);
+  }
+  .modal-doc{ max-width:720px; }
+  .modal-header{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 16px; border-bottom:1px solid var(--border-soft);
+    flex:0 0 auto;
+  }
+  .modal-title{ font-weight:600; font-size:16px; }
+  .modal-sub{ font-size:12.5px; color:var(--fg-muted); margin-top:2px; }
+  .modal-body{ padding:18px; overflow-y:auto; }
+  .modal-footer{
+    padding:14px 18px; border-top:1px solid var(--border-soft);
+    display:flex; align-items:center; justify-content:flex-end; gap:12px;
+    flex:0 0 auto;
+  }
+  .icon-btn{
+    width:40px; height:40px; border-radius:10px; border:none; background:transparent;
+    color:var(--fg-muted); display:flex; align-items:center; justify-content:center; cursor:pointer;
+    flex:0 0 auto;
+  }
+  .icon-btn:hover{ background:var(--elevated); color:var(--fg); }
+
+  .menu-option{
+    width:100%; display:flex; align-items:center; gap:14px;
+    padding:14px 14px; border-radius:12px; border:1px solid var(--border-soft);
+    background:var(--elevated); color:var(--fg); font-size:15px; font-weight:500;
+    cursor:pointer; margin-bottom:10px; min-height:58px; text-align:left;
+  }
+  .menu-option:last-child{ margin-bottom:0; }
+  .menu-option:hover{ border-color:#39415e; }
+  .mi-icon{
+    width:40px; height:40px; border-radius:10px; background:#1b2340; color:var(--active-fg);
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+  }
+  .mi-text{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .mi-badge{ font-size:11.5px; color:var(--ok); font-weight:600; }
+  .mi-badge.pending{ color:var(--fg-faint); font-weight:500; }
+  .mi-chevron{ color:var(--fg-faint); flex:0 0 auto; }
+
+  .field-row{ display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .field-row:last-child{ margin-bottom:0; }
+  .field-label{ font-size:11.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--fg-faint); }
+  .field-input{
+    background:var(--elevated); border:1px solid var(--border); border-radius:9px;
+    padding:11px 12px; font-size:14.5px; color:var(--fg); font-family:var(--font-ui); width:100%;
+  }
+  .field-input:focus{ outline:none; border-color:#39415e; }
+  .field-input:disabled{ opacity:.55; cursor:not-allowed; }
+  .field-hint{ font-size:12px; color:var(--fg-faint); margin-top:5px; }
+
+  .btn-ghost{
+    background:transparent; border:1px solid var(--border); color:var(--fg-muted);
+    font-weight:600; font-size:13.5px; padding:10px 16px; border-radius:9px; cursor:pointer;
+  }
+  .btn-ghost:hover{ color:var(--fg); border-color:#39415e; }
+  .footer-status{ font-size:13px; color:var(--ok); font-weight:600; margin-right:auto; }
+
+  .al-idle{ color:var(--fg-faint); font-size:13px; padding:8px 2px; }
+  .al-found{ background:var(--elevated); border:1px solid var(--border); border-radius:10px; padding:14px; }
+  .al-found-title{ font-weight:600; font-size:13.5px; margin-bottom:12px; }
+  .al-found-grid{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
+  .al-found-value{ font-size:13.5px; font-weight:600; margin-top:3px; font-variant-numeric:tabular-nums; }
+  .al-empty{ background:var(--warn-bg); border:1px solid rgba(240,179,92,.3); border-radius:10px; padding:14px; }
+  .al-empty-title{ font-weight:600; font-size:13.5px; color:var(--warn); margin-bottom:4px; }
+  .al-empty-sub{ font-size:12.5px; color:var(--fg-muted); line-height:1.5; }
+
+  .doc-body{ background:#05060a; padding:20px; }
+  .paper{
+    position:relative; background:#f7f4ea; color:#221e15; border-radius:12px;
+    padding:30px 28px; font-family:var(--font-doc); overflow:hidden;
+  }
+  .paper-watermark{
+    position:absolute; top:42%; left:50%; transform:translate(-50%,-50%) rotate(-18deg);
+    font-size:68px; font-weight:700; color:rgba(0,0,0,.05); letter-spacing:.12em;
+    pointer-events:none; white-space:nowrap; font-family:var(--font-ui);
+  }
+  .paper-topline{ display:flex; justify-content:space-between; align-items:center; font-family:var(--font-ui); margin-bottom:18px; position:relative; }
+  .paper-badge{
+    font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+    background:#fdeec2; color:#6b5112; padding:4px 9px; border-radius:999px;
+  }
+  .paper-no{ font-size:12px; color:#6b6554; font-variant-numeric:tabular-nums; }
+  .paper-title{ font-size:21px; margin:0 0 6px; position:relative; }
+  .paper-meta{ font-size:13.5px; color:#574f3b; margin:0 0 18px; font-family:var(--font-ui); position:relative; }
+  .paper-table{ width:100%; border-collapse:collapse; margin-bottom:18px; font-size:13.5px; font-family:var(--font-ui); position:relative; }
+  .paper-table td{ padding:7px 0; border-bottom:1px solid rgba(0,0,0,.08); }
+  .paper-table td:first-child{ color:#6b6554; width:44%; }
+  .paper-clause{ font-size:13px; line-height:1.65; color:#3b3627; margin-bottom:24px; position:relative; }
+  .paper-section{
+    font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:#8a7a4a; font-family:var(--font-ui); margin:20px 0 8px; position:relative;
+  }
+  .paper-section:first-of-type{ margin-top:0; }
+  .paper-note{ font-size:12px; color:#6b6554; font-style:italic; margin:-10px 0 18px; position:relative; }
+  .paper-rate-table{ width:100%; border-collapse:collapse; margin-bottom:14px; font-size:12px; font-family:var(--font-ui); position:relative; }
+  .paper-rate-table th{ text-align:left; font-weight:600; color:#8a7a4a; padding:4px 10px 4px 0; border-bottom:1px solid rgba(0,0,0,.15); }
+  .paper-rate-table td{ padding:3px 10px 3px 0; color:#3b3627; }
+  .paper-rate-table td.active, .paper-rate-table th.active{ color:#8a5a12; font-weight:700; }
+  .sig-block{ display:flex; align-items:flex-end; gap:16px; padding-top:16px; border-top:1px solid rgba(0,0,0,.12); position:relative; }
+  .sig-img{ height:58px; object-fit:contain; }
+  .sig-stamp{
+    border:1px solid rgba(28,107,63,.4); border-radius:8px; padding:10px 14px;
+    font-family:var(--font-ui); font-weight:600; font-size:13px; color:#1c6b3f; background:rgba(28,107,63,.08);
+  }
+  .sig-empty-line{ width:220px; height:1px; background:rgba(0,0,0,.32); margin-bottom:7px; }
+  .sig-caption{ font-family:var(--font-ui); font-size:12.5px; }
+  .sig-name{ font-weight:600; font-size:13.5px; }
+  .sig-date{ color:#6b6554; }
+  .sig-caption.muted{ color:#8a8469; }
+
+  .toast{
+    position:fixed; left:50%; bottom:28px; transform:translateX(-50%);
+    background:#161a26; border:1px solid #2a3350; color:#e7e8ee;
+    padding:12px 18px; border-radius:10px; font-size:13.5px; font-weight:500;
+    box-shadow:0 10px 30px rgba(0,0,0,.4); z-index:90;
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .toast.show{ opacity:1; }
+
+  /* ---- full-screen signing ---- */
+  .sign-screen{ position:fixed; inset:0; background:#05060a; z-index:70; display:flex; flex-direction:column; }
+  .sign-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px; border-bottom:1px solid var(--border); flex:0 0 auto;
+  }
+  .sign-title{ font-weight:600; font-size:15px; }
+  .sign-hint{ text-align:center; color:var(--fg-muted); font-size:13.5px; padding:14px 18px 0; flex:0 0 auto; }
+  .sign-pad-wrap{
+    flex:1; margin:18px; position:relative; background:#f7f4ea; border-radius:16px; overflow:hidden;
+    touch-action:none; min-height:220px;
+  }
+  #sig-canvas{ position:absolute; inset:0; width:100%; height:100%; touch-action:none; }
+  .sign-line{ position:absolute; left:8%; right:8%; bottom:24%; height:1px; background:rgba(0,0,0,.35); pointer-events:none; }
+  .sign-placeholder{ position:absolute; left:8%; bottom:calc(24% + 8px); color:rgba(0,0,0,.32); font-size:14px; pointer-events:none; font-family:var(--font-ui); }
+  .sign-actions{ display:flex; justify-content:space-between; gap:14px; padding:16px 18px 26px; flex:0 0 auto; }
+  .sign-actions .btn-new{ padding:13px 24px; font-size:15px; }
+  .sign-actions .btn-ghost{ padding:13px 20px; font-size:14px; }
+</style>
+
+<div class="app">
+  <div class="brand">
+    <div class="brand-mark">e</div>
+    <div class="brand-name">ExtraSpace &middot; Self Storage</div>
+    <svg class="brand-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 9 12 4 17 9"/><polyline points="7 15 12 20 17 15"/></svg>
+  </div>
+
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Leases</div>
+    <div class="topbar-right">
+      <div class="theme-toggle" role="group" aria-label="Theme">
+        <button type="button" aria-label="Light theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        </button>
+        <button type="button" class="active" aria-label="Dark theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+        </button>
+        <button type="button" aria-label="System theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </button>
+      </div>
+      <div class="profile">
+        <div class="avatar">P</div>
+        <div class="profile-name">Platform Admin</div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="nav-group">
+      <a class="nav-item" data-page="dashboard">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        Dashboard
+      </a>
+    </div>
+
+    <div class="nav-label">Platform</div>
+    <div class="nav-group">
+      <a class="nav-item" data-page="sites">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-7.1 7-12a7 7 0 1 0-14 0c0 4.9 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+        Sites
+      </a>
+      <a class="nav-item" data-page="storage-types">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 10h18M9 4v16"/></svg>
+        Storage Types
+      </a>
+      <a class="nav-item" data-page="unit-sizes">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        Unit Sizes
+      </a>
+      <a class="nav-item" data-page="units">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8M12 13v8"/></svg>
+        Units
+      </a>
+    </div>
+
+    <div class="nav-label">Tenants</div>
+    <div class="nav-group">
+      <a class="nav-item" data-page="customers">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+        Customers
+      </a>
+      <a class="nav-item" data-page="leases">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8Z"/><path d="M14 3v5h5M8 13h8M8 17h5"/></svg>
+        Leases
+      </a>
+      <a class="nav-item" data-page="reservations">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4Z"/></svg>
+        Reservations
+      </a>
+      <a class="nav-item" data-page="viewing-appointments">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Viewing Appointments
+      </a>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <section class="page-section" data-page="customers" id="page-customers" hidden>
+      <div class="panel">
+        <div class="panel-toolbar">
+          <div class="search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" placeholder="Search customers...">
+          </div>
+          <button class="btn-new" type="button">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            New
+          </button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th class="phone">Phone</th>
+                <th>City</th>
+                <th class="chevron-col"></th>
+              </tr>
+            </thead>
+            <tbody id="cust-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-section" data-page="leases" id="page-leases" hidden>
+      <div class="lease-filters">
+        <div class="facility-filter" id="country-filter"></div>
+        <select class="facility-select" id="facility-select"></select>
+      </div>
+      <div class="panel">
+        <div class="panel-toolbar">
+          <div class="search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" placeholder="Search leases...">
+          </div>
+          <div class="toolbar-actions">
+            <button class="btn-new" type="button" id="lease-new-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+              Add
+            </button>
+            <button class="btn-teal" type="button" id="refresh-site-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/></svg>
+              Refresh this site
+            </button>
+            <button class="btn-amber" type="button" id="refresh-all-btn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/></svg>
+              Refresh all sites
+            </button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Unit</th>
+                <th>Status</th>
+                <th>Monthly Rent</th>
+                <th>Start Date</th>
+                <th class="chevron-col"></th>
+              </tr>
+            </thead>
+            <tbody id="lease-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-section" data-page="placeholder" id="page-placeholder" hidden>
+      <div class="panel" style="padding:44px 28px; text-align:center;">
+        <div style="font-weight:600; font-size:16px; margin-bottom:6px;" id="placeholder-title">—</div>
+        <div style="color:var(--fg-muted); font-size:14px;">This section isn't wired up in this prototype yet.</div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div id="modal-root" hidden></div>
+
+<script>
+(function(){
+  const root = document.getElementById('modal-root');
+  let activeCustomerId = null;
+  let activeLeaseId = null;
+  let pendingDocType = null;
+  let currentCountry = 'all';
+  let currentFacility = 'all';
+
+  const todayStr = new Date().toLocaleDateString('en-SG', { day:'2-digit', month:'short', year:'numeric' });
+
+  /* ================= page switching ================= */
+  const PAGE_TITLES = {
+    dashboard:'Dashboard', sites:'Sites', 'storage-types':'Storage Types', 'unit-sizes':'Unit Sizes',
+    units:'Units', customers:'Customers', leases:'Leases', reservations:'Reservations',
+    'viewing-appointments':'Viewing Appointments'
+  };
+  function setPage(page){
+    document.querySelectorAll('.nav-item[data-page]').forEach(el => {
+      el.classList.toggle('active', el.dataset.page === page);
+    });
+    const known = page === 'customers' || page === 'leases';
+    document.getElementById('page-customers').hidden = page !== 'customers';
+    document.getElementById('page-leases').hidden = page !== 'leases';
+    document.getElementById('page-placeholder').hidden = known;
+    if(!known) document.getElementById('placeholder-title').textContent = PAGE_TITLES[page] || '';
+    document.getElementById('topbar-title').textContent = PAGE_TITLES[page] || 'Dashboard';
+  }
+  document.querySelectorAll('.nav-item[data-page]').forEach(el => {
+    el.addEventListener('click', () => setPage(el.dataset.page));
+  });
+
+  /* ================= helpers ================= */
+  function esc(s){
+    return String(s==null?'':s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  }
+  function formatDate(d){
+    return new Date(d).toLocaleString('en-SG', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+
+  const ICONS = {
+    file: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8Z"/><path d="M14 3v5h5M8 13h8M8 17h5"/></svg>',
+    shield: '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.8-3 8.4-7 9-4-0.6-7-4.2-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>',
+    close: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    back: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
+    chevron: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>'
+  };
+
+  /* ================= customers ================= */
+  const customers = [
+    { id:'c1', email:'person1@example.invalid', firstName:'', lastName:'', phone:'', city:'' },
+    { id:'c2', email:'person2@example.invalid', firstName:'JY', lastName:'Lim', phone:'6588583783', city:'' },
+    { id:'c3', email:'person3@example.invalid', firstName:'', lastName:'', phone:'', city:'' },
+    { id:'c4', email:'person4@example.invalid', firstName:'Kai', lastName:'Testing Aug', phone:'', city:'' },
+    { id:'c5', email:'sarah.kim8@example.com', firstName:'Sarah', lastName:'Kim', phone:'+65 0000 0000', city:'Sec…' },
+    { id:'c6', email:'jun.hao.lim7@example.com', firstName:'Jun Hao', lastName:'Lim', phone:'+65 0000 0000', city:'Sec…' },
+    { id:'c7', email:'marcus.lim17@example.com', firstName:'Marcus', lastName:'Lim', phone:'+65 0000 0000', city:'Sin…' },
+  ];
+  function getCustomer(id){ return customers.find(c => c.id === id); }
+  function custDisplayName(c){
+    const n = `${c.firstName||''} ${c.lastName||''}`.trim();
+    return n || c.email.split('@')[0];
+  }
+
+  function renderCustomerRows(){
+    const tbody = document.getElementById('cust-tbody');
+    tbody.innerHTML = customers.map(c => `
+      <tr data-id="${c.id}" class="row-clickable">
+        <td>${esc(c.email)}</td>
+        <td class="${c.firstName ? '' : 'muted'}">${esc(c.firstName) || '&mdash;'}</td>
+        <td class="${c.lastName ? '' : 'muted'}">${esc(c.lastName) || '&mdash;'}</td>
+        <td class="phone ${c.phone ? '' : 'muted'}">${esc(c.phone) || '&mdash;'}</td>
+        <td class="${c.city ? '' : 'muted'}">${esc(c.city) || '&mdash;'}</td>
+        <td class="chevron-cell">${ICONS.chevron}</td>
+      </tr>
+    `).join('');
+    tbody.querySelectorAll('tr').forEach(tr => {
+      tr.addEventListener('click', () => { activeCustomerId = tr.dataset.id; renderCustomerDetails(); });
+    });
+  }
+
+  function renderCustomerDetails(){
+    const c = getCustomer(activeCustomerId);
+    showOverlay(`
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <div class="modal-title">Customer Details</div>
+            <div class="modal-sub">${esc(custDisplayName(c))}</div>
+          </div>
+          <button class="icon-btn" data-close>${ICONS.close}</button>
+        </div>
+        <div class="modal-body">
+          <div class="field-row">
+            <label class="field-label">Email</label>
+            <input class="field-input" type="email" value="${esc(c.email)}" disabled>
+            <div class="field-hint">Email can't be changed here</div>
+          </div>
+          <div class="field-row">
+            <label class="field-label">First Name</label>
+            <input class="field-input" id="f-first" type="text" value="${esc(c.firstName)}" placeholder="&mdash;">
+          </div>
+          <div class="field-row">
+            <label class="field-label">Last Name</label>
+            <input class="field-input" id="f-last" type="text" value="${esc(c.lastName)}" placeholder="&mdash;">
+          </div>
+          <div class="field-row">
+            <label class="field-label">Phone</label>
+            <input class="field-input" id="f-phone" type="tel" value="${esc(c.phone)}" placeholder="&mdash;">
+          </div>
+          <div class="field-row">
+            <label class="field-label">City</label>
+            <input class="field-input" id="f-city" type="text" value="${esc(c.city)}" placeholder="&mdash;">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-new" data-save>Save Changes</button>
+        </div>
+      </div>
+    `);
+    root.querySelector('[data-close]').addEventListener('click', closeModal);
+    root.querySelector('[data-save]').addEventListener('click', () => {
+      c.firstName = document.getElementById('f-first').value.trim();
+      c.lastName = document.getElementById('f-last').value.trim();
+      c.phone = document.getElementById('f-phone').value.trim();
+      c.city = document.getElementById('f-city').value.trim();
+      renderCustomerRows();
+      closeModal();
+      showToast('Customer details saved');
+    });
+  }
+
+  /* ================= facilities & leases =================
+     Facility list sourced from Sites.xlsx (Loc / Name / State / Currency).
+     "Bizplus" entries in that file are co-working credit spaces, not
+     self-storage sites, so they're left out of this leases list. */
+  /* Addresses / insurance-form codes below are taken verbatim from the
+     "List " sheet of Customer Storage Insurance Form.xlsx (the Singapore
+     facility lookup that feeds the real Application form). AMK is the one
+     facility whose UEN is confirmed (from the License Agreement PDF's
+     recitals), so that's the only entry carrying a `uen`/`regOffice`.
+     Facilities not in that sheet (Hillview, and all Korea/Malaysia sites)
+     are left without a real street address rather than inventing one.
+     Note: the insurance workbook's list also includes "Extra Space Toh
+     Guan Pte Ltd" (-TGR), which isn't in Sites.xlsx's 24-site list used
+     elsewhere in this prototype — flagged, not reconciled. */
+  const facilities = [
+    { code:'L001', name:'Extra Space Jurong Pte Ltd',         country:'Singapore', currency:'$', insCode:'IMM', address:'2 Jurong East Street 21, IMM Building, Singapore 609601' },
+    { code:'L002', name:'Extra Space Pte Ltd',                country:'Singapore', currency:'$', insCode:'BKR', address:'301 Boon Keng Road, Singapore 339779' },
+    { code:'L003', name:'Extra Space Eunos Link Pte Ltd',     country:'Singapore', currency:'$', insCode:'ELK', address:'7 Kaki Bukit Road 2, Singapore 417840' },
+    { code:'L004', name:'Extra Space West Coast Pte Ltd',     country:'Singapore', currency:'$', insCode:'WC',  address:'2 Toh Tuck Link, Singapore 596225' },
+    { code:'L005', name:'Extra Space Marymount Pte Ltd',      country:'Singapore', currency:'$', insCode:'MMR', address:'9 Sin Ming Industrial Estate Sector B, Singapore 575654' },
+    { code:'L008', name:'Extra Space Kallang Way Pte Ltd',    country:'Singapore', currency:'$', insCode:'KWY', address:'12 Kallang Sector, Singapore 349281' },
+    { code:'L017', name:'Extra Space Woodlands Pte Ltd',      country:'Singapore', currency:'$', insCode:'WDL', address:'11 Woodlands Close, Singapore 737853' },
+    { code:'L018', name:'Extra Space AMK Pte Ltd',            country:'Singapore', currency:'$', insCode:'AMK', address:'14 Ang Mo Kio Industrial Park 2, Singapore 569503', uen:'201219184R', regOffice:'301 Boon Keng Road, Singapore 339779' },
+    { code:'L022', name:'Extra Space Toa Payoh Pte Ltd',      country:'Singapore', currency:'$', insCode:'TPY', address:'11 Lorong 3 Toa Payoh, Jackson Square, Singapore 319579' },
+    { code:'L025', name:'Extra Space Hillview Pte Ltd',       country:'Singapore', currency:'$', insCode:'HVW' },
+    { code:'L029', name:'Extra Space Commonwealth Pte Ltd',   country:'Singapore', currency:'$', insCode:'CMW', address:'115A Commonwealth Drive, Singapore 149596' },
+    { code:'L030', name:'Extra Space Tai Seng Pte Ltd',       country:'Singapore', currency:'$', insCode:'TS',  address:'14 Little Road, Singapore 536987' },
+    { code:'L006', name:'Extra Space - Yangjae',              country:'Korea',    currency:'₩', insCode:'YJ' },
+    { code:'L011', name:'Extra Space - Bundang',              country:'Korea',    currency:'₩', insCode:'BD' },
+    { code:'L013', name:'Extra Space - Gasan',                country:'Korea',    currency:'₩', insCode:'GS' },
+    { code:'L019', name:'Extra Space - Apgujeong',            country:'Korea',    currency:'₩', insCode:'APG' },
+    { code:'L021', name:'Extra Space - Yeongdeungpo',         country:'Korea',    currency:'₩', insCode:'YDP' },
+    { code:'L023', name:'Extra Space - Yongsan',              country:'Korea',    currency:'₩', insCode:'YS' },
+    { code:'L024', name:'Extra Space - Banpo',                country:'Korea',    currency:'₩', insCode:'BP' },
+    { code:'L031', name:'Extra Space Yangcheon',              country:'Korea',    currency:'₩', insCode:'YC' },
+    { code:'L007', name:'Extra Space Malaysia Sdn Bhd',       country:'Malaysia', currency:'RM', insCode:'MY' },
+    { code:'L009', name:'Extra Space Segambut Sdn Bhd',       country:'Malaysia', currency:'RM', insCode:'SGB' },
+    { code:'L010', name:'Extra Space S51A Sdn Bhd',           country:'Malaysia', currency:'RM', insCode:'S51A' },
+    { code:'L026', name:'Extra Space Kota Damansara Sdn Bhd', country:'Malaysia', currency:'RM', insCode:'KD' },
+  ];
+  function getFacility(code){ return facilities.find(f => f.code === code); }
+  function facilityLocation(fac){ return fac.address || `${fac.name}, ${fac.country}`; }
+
+  function money(amount, currency){
+    const n = amount.toLocaleString('en-US');
+    return currency === '₩' ? ('₩' + n) : currency === 'RM' ? ('RM' + n) : ('$' + n);
+  }
+
+  /* Real "Sum Insured and Premium range" table, SGD, from the 'Application
+     form ' / 'List ' sheets of Customer Storage Insurance Form.xlsx. The
+     workbook and its legal/insurer references (MSIG, Storage Ventures Asia
+     Pte Ltd) are Singapore-specific, so only Singapore leases use these
+     figures verbatim; Korea/Malaysia leases scale them by a rough currency
+     factor so every lease still shows a plausible tier, not because an
+     equivalent real rate card exists for those countries. */
+  const INSURANCE_RATE_TABLE = [
+    { sum:1000,  premium:2  }, { sum:5000,  premium:4  }, { sum:10000, premium:6  },
+    { sum:15000, premium:8  }, { sum:20000, premium:10 }, { sum:25000, premium:14 },
+    { sum:30000, premium:18 }, { sum:35000, premium:22 }, { sum:40000, premium:24 },
+    { sum:45000, premium:30 }, { sum:50000, premium:40 },
+  ];
+  function currencyFactor(currency){
+    if(currency === '₩') return 1100;
+    if(currency === 'RM') return 3.2;
+    return 1;
+  }
+  function insuranceForLease(l, fac){
+    const factor = currencyFactor(fac.currency);
+    const rateSgdEquiv = l.rate / factor;
+    let idx = 2; // default: $10,000 sum insured
+    if(rateSgdEquiv < 120) idx = 1;
+    else if(rateSgdEquiv < 180) idx = 2;
+    else if(rateSgdEquiv < 240) idx = 3;
+    else if(rateSgdEquiv < 300) idx = 5;
+    else if(rateSgdEquiv < 360) idx = 7;
+    else idx = 9;
+    const tier = INSURANCE_RATE_TABLE[idx];
+    return {
+      sum: Math.round(tier.sum * factor),
+      premium: Math.round(tier.premium * factor * 100) / 100,
+      excess: Math.round(250 * factor),
+      tierIdx: idx,
+    };
+  }
+
+  function doc(signed, signedAt){
+    return { signed: !!signed, signedAt: signedAt || null, signature: null };
+  }
+
+  const leases = [
+    // Singapore — Extra Space Pte Ltd (L002)
+    { id:'l1',  facility:'L002', customerEmail:'person2@example.invalid',        customerName:'JY Lim',          unit:'W1057', rate:144, startDate:'25 Sept 2026', agreement:doc(true,'2026-09-25T14:10:00+08:00'), insurance:doc(true,'2026-09-25T14:12:00+08:00') },
+    { id:'l2',  facility:'L002', customerEmail:'person2@example.invalid',        customerName:'JY Lim',          unit:'5082',  rate:255, startDate:'20 Sept 2026', agreement:doc(false), insurance:doc(false) },
+    { id:'l3',  facility:'L002', customerEmail:'person2@example.invalid',        customerName:'JY Lim',          unit:'A5010', rate:373, startDate:'18 Sept 2026', agreement:doc(true,'2026-09-18T09:40:00+08:00'), insurance:doc(true,'2026-09-18T09:42:00+08:00') },
+    { id:'l4',  facility:'L002', customerEmail:'person2@example.invalid',        customerName:'JY Lim',          unit:'2034',  rate:288, startDate:'01 Sept 2026', agreement:doc(true,'2026-09-01T11:05:00+08:00'), insurance:doc(false) },
+    { id:'l5',  facility:'L002', customerEmail:'person2@example.invalid',        customerName:'JY Lim',          unit:'A7025', rate:220, startDate:'25 Sept 2026', agreement:doc(true,'2026-09-25T16:20:00+08:00'), insurance:doc(true,'2026-09-25T16:22:00+08:00') },
+    { id:'l6',  facility:'L002', customerEmail:'person4@example.invalid', customerName:'Kai Testing Aug', unit:'K108',  rate:100, startDate:'08 Sept 2026', agreement:doc(false), insurance:doc(false) },
+    { id:'l7',  facility:'L002', customerEmail:'person4@example.invalid', customerName:'Kai Testing Aug', unit:'A7033', rate:420, startDate:'02 Aug 2026',  agreement:doc(true,'2026-08-02T10:00:00+08:00'), insurance:doc(true,'2026-08-02T10:03:00+08:00') },
+
+    // Singapore — Extra Space AMK Pte Ltd (L018)
+    { id:'l8',  facility:'L018', customerEmail:'wei.tan@example.com',     customerName:'Wei Tan',     unit:'3012',  rate:210, startDate:'14 Sept 2026', agreement:doc(false), insurance:doc(false) },
+    { id:'l9',  facility:'L018', customerEmail:'amanda.ng@example.com',   customerName:'Amanda Ng',   unit:'A2041', rate:268, startDate:'02 Sept 2026', agreement:doc(true,'2026-09-02T13:15:00+08:00'), insurance:doc(true,'2026-09-02T13:18:00+08:00') },
+    { id:'l10', facility:'L018', customerEmail:'farah.yusof@example.com', customerName:'Farah Yusof', unit:'W2098', rate:198, startDate:'28 Aug 2026',  agreement:doc(true,'2026-08-28T10:45:00+08:00'), insurance:doc(false) },
+    { id:'l11', facility:'L018', customerEmail:'wei.tan@example.com',     customerName:'Wei Tan',     unit:'A3087', rate:302, startDate:'19 Sept 2026', agreement:doc(true,'2026-09-19T09:05:00+08:00'), insurance:doc(true,'2026-09-19T09:07:00+08:00') },
+
+    // Singapore — Extra Space Tai Seng Pte Ltd (L030)
+    { id:'l12', facility:'L030', customerEmail:'ryan.goh@example.com',   customerName:'Ryan Goh',   unit:'4150',  rate:176, startDate:'10 Sept 2026', agreement:doc(true,'2026-09-10T15:30:00+08:00'), insurance:doc(true,'2026-09-10T15:32:00+08:00') },
+    { id:'l13', facility:'L030', customerEmail:'priya.nair@example.com', customerName:'Priya Nair', unit:'A4502', rate:345, startDate:'22 Aug 2026',  agreement:doc(false), insurance:doc(false) },
+    { id:'l14', facility:'L030', customerEmail:'priya.nair@example.com', customerName:'Priya Nair', unit:'4511',  rate:162, startDate:'30 Aug 2026',  agreement:doc(true,'2026-08-30T12:00:00+08:00'), insurance:doc(true,'2026-08-30T12:02:00+08:00') },
+
+    // Singapore — Extra Space West Coast Pte Ltd (L004)
+    { id:'l15', facility:'L004', customerEmail:'daniel.ooi@example.com',  customerName:'Daniel Ooi',  unit:'W5021', rate:410, startDate:'05 Sept 2026', agreement:doc(true,'2026-09-05T08:50:00+08:00'), insurance:doc(true,'2026-09-05T08:52:00+08:00') },
+    { id:'l16', facility:'L004', customerEmail:'siti.rahman@example.com', customerName:'Siti Rahman', unit:'A5133', rate:229, startDate:'12 Sept 2026', agreement:doc(true,'2026-09-12T14:40:00+08:00'), insurance:doc(false) },
+    { id:'l17', facility:'L004', customerEmail:'siti.rahman@example.com', customerName:'Siti Rahman', unit:'5144',  rate:150, startDate:'27 Aug 2026',  agreement:doc(false), insurance:doc(false) },
+    { id:'l18', facility:'L004', customerEmail:'daniel.ooi@example.com',  customerName:'Daniel Ooi',  unit:'A5190', rate:388, startDate:'15 Sept 2026', agreement:doc(true,'2026-09-15T17:10:00+08:00'), insurance:doc(true,'2026-09-15T17:12:00+08:00') },
+
+    // Korea — Extra Space - Yangjae (L006)
+    { id:'l19', facility:'L006', customerEmail:'minji.kwon@example.com',  customerName:'Minji Kwon',  unit:'1043',  rate:180000, startDate:'14 Sept 2026', agreement:doc(true,'2026-09-14T11:20:00+09:00'), insurance:doc(true,'2026-09-14T11:22:00+09:00') },
+    { id:'l20', facility:'L006', customerEmail:'jihoon.park@example.com', customerName:'Jihoon Park', unit:'H2047', rate:320000, startDate:'22 Aug 2026',  agreement:doc(false), insurance:doc(false) },
+
+    // Korea — Extra Space - Banpo (L024)
+    { id:'l21', facility:'L024', customerEmail:'seoyeon.choi@example.com', customerName:'Seoyeon Choi', unit:'1006',  rate:165000, startDate:'05 Sept 2026', agreement:doc(true,'2026-09-05T13:00:00+09:00'), insurance:doc(false) },
+    { id:'l22', facility:'L024', customerEmail:'donghyun.lee@example.com', customerName:'Donghyun Lee', unit:'H1082', rate:295000, startDate:'18 Sept 2026', agreement:doc(true,'2026-09-18T10:10:00+09:00'), insurance:doc(true,'2026-09-18T10:12:00+09:00') },
+
+    // Malaysia — Extra Space Malaysia Sdn Bhd (L007)
+    { id:'l23', facility:'L007', customerEmail:'siti.aminah@example.com', customerName:'Siti Aminah', unit:'1137',  rate:210, startDate:'10 Sept 2026', agreement:doc(true,'2026-09-10T09:30:00+08:00'), insurance:doc(true,'2026-09-10T09:32:00+08:00') },
+    { id:'l24', facility:'L007', customerEmail:'kumar.raj@example.com',   customerName:'Kumar Raj',   unit:'A1209', rate:268, startDate:'25 Aug 2026',  agreement:doc(false), insurance:doc(false) },
+
+    // Malaysia — Extra Space Kota Damansara Sdn Bhd (L026)
+    { id:'l25', facility:'L026', customerEmail:'lim.wei.jie@example.com', customerName:'Lim Wei Jie', unit:'G1223', rate:185, startDate:'02 Sept 2026', agreement:doc(true,'2026-09-02T15:00:00+08:00'), insurance:doc(false) },
+    { id:'l26', facility:'L026', customerEmail:'nurul.huda@example.com',  customerName:'Nurul Huda',  unit:'1052',  rate:220, startDate:'20 Sept 2026', agreement:doc(true,'2026-09-20T16:40:00+08:00'), insurance:doc(true,'2026-09-20T16:42:00+08:00') },
+  ];
+
+  let leaseIdCounter = leases.length;
+  function getLease(id){ return leases.find(l => l.id === id); }
+
+  /* ---- mock Sitelink: staff press Refresh to manually pull a customer's
+     latest signup instead of waiting for the hourly batch sync ---- */
+  const sitelinkDB = {
+    'newcustomer1@example.com':  { customerName:'Alex Tanoto',   facility:'L002', unit:'A6090', rate:245,    startDate:'09 Oct 2026' },
+    'wei.lim@example.com':       { customerName:'Wei Lim',       facility:'L018', unit:'6210',  rate:188,    startDate:'08 Oct 2026' },
+    'grace.tan@example.com':     { customerName:'Grace Tan',     facility:'L030', unit:'W6412', rate:398,    startDate:'09 Oct 2026' },
+    'hyejin.song@example.com':   { customerName:'Hyejin Song',   facility:'L006', unit:'1070',  rate:205000, startDate:'09 Oct 2026' },
+    'azlan.ibrahim@example.com': { customerName:'Azlan Ibrahim', facility:'L007', unit:'A1340', rate:255,    startDate:'08 Oct 2026' },
+  };
+  function sitelinkLookup(email){
+    return sitelinkDB[email.trim().toLowerCase()] || null;
+  }
+
+  function openAddLeaseModal(){
+    let found = null;
+    showOverlay(`
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">Add Customer from Sitelink</div>
+          <button class="icon-btn" data-close>${ICONS.close}</button>
+        </div>
+        <div class="modal-body">
+          <div class="field-row">
+            <label class="field-label">Customer Email</label>
+            <input class="field-input" id="al-email" type="email" placeholder="customer@example.com" autocomplete="off">
+            <div class="field-hint">Sitelink only syncs hourly &mdash; try <strong>newcustomer1@example.com</strong> or <strong>hyejin.song@example.com</strong>, or any other email to see the not-found case.</div>
+          </div>
+          <button class="btn-ghost" id="al-refresh" style="width:100%; justify-content:center; margin:2px 0 16px;">&#8635; Refresh from Sitelink</button>
+          <div id="al-result"><div class="al-idle">Storage details will appear here after you refresh.</div></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-ghost" data-cancel>Cancel</button>
+          <button class="btn-new" id="al-add" disabled>Add</button>
+        </div>
+      </div>
+    `);
+    root.querySelector('[data-close]').addEventListener('click', closeModal);
+    root.querySelector('[data-cancel]').addEventListener('click', closeModal);
+
+    const emailInput = document.getElementById('al-email');
+    const refreshBtn = document.getElementById('al-refresh');
+    const addBtn = document.getElementById('al-add');
+    const resultEl = document.getElementById('al-result');
+
+    emailInput.addEventListener('input', () => {
+      found = null;
+      addBtn.disabled = true;
+      resultEl.innerHTML = `<div class="al-idle">Storage details will appear here after you refresh.</div>`;
+    });
+
+    refreshBtn.addEventListener('click', () => {
+      const email = emailInput.value.trim();
+      if(!email){ emailInput.focus(); return; }
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = 'Checking Sitelink…';
+      resultEl.innerHTML = `<div class="al-idle">Checking Sitelink…</div>`;
+      setTimeout(() => {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '&#8635; Refresh from Sitelink';
+        const record = sitelinkLookup(email);
+        if(record){
+          found = Object.assign({ email: email.toLowerCase() }, record);
+          const fac = getFacility(record.facility);
+          resultEl.innerHTML = `
+            <div class="al-found">
+              <div class="al-found-title">${esc(record.customerName)} &middot; ${esc(fac.name)}, ${esc(fac.country)}</div>
+              <div class="al-found-grid">
+                <div><div class="field-label">Unit</div><div class="al-found-value">${esc(record.unit)}</div></div>
+                <div><div class="field-label">Monthly Rent</div><div class="al-found-value">${esc(money(record.rate, fac.currency))}</div></div>
+                <div><div class="field-label">Start Date</div><div class="al-found-value">${esc(record.startDate)}</div></div>
+              </div>
+            </div>
+          `;
+          addBtn.disabled = false;
+        } else {
+          found = null;
+          resultEl.innerHTML = `
+            <div class="al-empty">
+              <div class="al-empty-title">No storage details found</div>
+              <div class="al-empty-sub">Sitelink hasn't synced this customer yet &mdash; it refreshes hourly. Try again shortly, or double-check the email.</div>
+            </div>
+          `;
+          addBtn.disabled = true;
+        }
+      }, 600);
+    });
+
+    addBtn.addEventListener('click', () => {
+      if(!found) return;
+      const id = 'l' + (++leaseIdCounter);
+      leases.push({
+        id, facility: found.facility, customerEmail: found.email, customerName: found.customerName,
+        unit: found.unit, rate: found.rate, startDate: found.startDate,
+        agreement: doc(false), insurance: doc(false)
+      });
+      const fac = getFacility(found.facility);
+      currentCountry = fac.country;
+      currentFacility = found.facility;
+      renderCountryFilter();
+      renderFacilitySelect();
+      renderLeaseRows();
+      closeModal();
+      showToast('Customer added — pending agreement & insurance');
+    });
+  }
+  function leaseStatus(l){
+    if(!l.agreement.signed || !l.insurance.signed) return { label:'Pending', tone:'warn' };
+    return { label:'Active', tone:'ok' };
+  }
+  function unitSizeLabel(l, fac){
+    // Prefix meanings confirmed for Singapore only (plain = standard, A = aircon,
+    // W = wine). Malaysia/Korea use their own prefixes (A, G, H) whose exact
+    // meaning wasn't in the source file, so those just show as "Storage Unit".
+    if(fac.country === 'Singapore'){
+      if(l.unit.startsWith('W')) return 'Wine Storage';
+      if(l.unit.startsWith('A')) return 'Aircon Storage';
+      return 'Standard Storage';
+    }
+    return 'Storage Unit';
+  }
+
+  function visibleLeases(){
+    return leases.filter(l => {
+      if(currentFacility !== 'all') return l.facility === currentFacility;
+      if(currentCountry !== 'all'){
+        const fac = getFacility(l.facility);
+        return fac && fac.country === currentCountry;
+      }
+      return true;
+    });
+  }
+
+  function renderCountryFilter(){
+    const wrap = document.getElementById('country-filter');
+    const countries = [
+      { id:'all', name:'All Countries' },
+      { id:'Singapore', name:'Singapore' },
+      { id:'Korea', name:'Korea' },
+      { id:'Malaysia', name:'Malaysia' },
+    ];
+    wrap.innerHTML = countries.map(c => `
+      <button class="facility-chip ${c.id === currentCountry ? 'active' : ''}" data-country="${c.id}">${esc(c.name)}</button>
+    `).join('');
+    wrap.querySelectorAll('.facility-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentCountry = btn.dataset.country;
+        currentFacility = 'all';
+        renderCountryFilter();
+        renderFacilitySelect();
+        renderLeaseRows();
+      });
+    });
+  }
+
+  function renderFacilitySelect(){
+    const sel = document.getElementById('facility-select');
+    const groups = {};
+    facilities.forEach(f => {
+      if(currentCountry !== 'all' && f.country !== currentCountry) return;
+      (groups[f.country] = groups[f.country] || []).push(f);
+    });
+    let html = `<option value="all">All Facilities</option>`;
+    Object.keys(groups).forEach(country => {
+      html += `<optgroup label="${esc(country)}">`;
+      groups[country].forEach(f => { html += `<option value="${f.code}">${esc(f.name)}</option>`; });
+      html += `</optgroup>`;
+    });
+    sel.innerHTML = html;
+    sel.value = currentFacility;
+  }
+
+  function renderLeaseRows(){
+    const tbody = document.getElementById('lease-tbody');
+    const rows = visibleLeases();
+    if(rows.length === 0){
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--fg-faint);padding:30px 18px;">No leases recorded for this facility yet.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(l => {
+      const st = leaseStatus(l);
+      const fac = getFacility(l.facility);
+      return `
+        <tr data-id="${l.id}" class="row-clickable">
+          <td>${esc(l.customerEmail)}</td>
+          <td>${esc(l.unit)}</td>
+          <td><span class="badge badge-${st.tone}">${esc(st.label)}</span></td>
+          <td class="rent">${money(l.rate, fac.currency)}</td>
+          <td>${esc(l.startDate)}</td>
+          <td class="chevron-cell">${ICONS.chevron}</td>
+        </tr>
+      `;
+    }).join('');
+    tbody.querySelectorAll('tr').forEach(tr => {
+      tr.addEventListener('click', () => { activeLeaseId = tr.dataset.id; renderLeaseMenu(); });
+    });
+  }
+
+  function renderLeaseMenu(){
+    const l = getLease(activeLeaseId);
+    showOverlay(`
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <div class="modal-title">${esc(l.customerName)}</div>
+            <div class="modal-sub">${esc(getFacility(l.facility).name)} &middot; Unit ${esc(l.unit)} &middot; ${esc(l.customerEmail)}</div>
+          </div>
+          <button class="icon-btn" data-close>${ICONS.close}</button>
+        </div>
+        <div class="modal-body">
+          <button class="menu-option" data-action="agreement">
+            <div class="mi-icon">${ICONS.file}</div>
+            <div class="mi-text">
+              <div>Generate Agreement File</div>
+              <div class="mi-badge ${l.agreement.signed ? '' : 'pending'}">${l.agreement.signed ? '&check; Signed ' + esc(formatDate(l.agreement.signedAt)) : 'Not yet signed'}</div>
+            </div>
+            <div class="mi-chevron">${ICONS.chevron}</div>
+          </button>
+          <button class="menu-option" data-action="insurance">
+            <div class="mi-icon">${ICONS.shield}</div>
+            <div class="mi-text">
+              <div>Generate Insurance File</div>
+              <div class="mi-badge ${l.insurance.signed ? '' : 'pending'}">${l.insurance.signed ? '&check; Signed ' + esc(formatDate(l.insurance.signedAt)) : 'Not yet signed'}</div>
+            </div>
+            <div class="mi-chevron">${ICONS.chevron}</div>
+          </button>
+        </div>
+      </div>
+    `);
+    root.querySelector('[data-close]').addEventListener('click', closeModal);
+    root.querySelector('[data-action="agreement"]').addEventListener('click', () => renderLeaseDocument('agreement'));
+    root.querySelector('[data-action="insurance"]').addEventListener('click', () => renderLeaseDocument('insurance'));
+  }
+
+  /* ---- document papers ---- */
+  function signatureBlock(d, name){
+    if(d.signed && d.signature){
+      return `
+        <div class="sig-block">
+          <img class="sig-img" src="${d.signature}" alt="Signature of ${esc(name)}">
+          <div class="sig-caption"><div class="sig-name">${esc(name)}</div><div class="sig-date">Signed ${esc(formatDate(d.signedAt))}</div></div>
+        </div>`;
+    }
+    if(d.signed){
+      return `
+        <div class="sig-block">
+          <div class="sig-stamp">&#10003; Signed electronically</div>
+          <div class="sig-caption"><div class="sig-name">${esc(name)}</div><div class="sig-date">Signed ${esc(formatDate(d.signedAt))}</div></div>
+        </div>`;
+    }
+    return `
+      <div class="sig-block">
+        <div><div class="sig-empty-line"></div><div class="sig-caption muted">Customer signature</div></div>
+      </div>`;
+  }
+
+  function buildAgreementPaper(l){
+    const fac = getFacility(l.facility);
+    const isSg = fac.country === 'Singapore';
+    const ownerLine = fac.uen
+      ? `${esc(fac.name)}, incorporated in Singapore (UEN ${esc(fac.uen)}), registered office at ${esc(fac.regOffice)}`
+      : (isSg && fac.address ? `${esc(fac.name)}, registered office at ${esc(fac.address)}` : esc(fac.name));
+    return `
+      <div class="paper">
+        <div class="paper-watermark">SAMPLE</div>
+        <div class="paper-topline">
+          <span class="paper-badge">Standard Self Storage License Agreement &middot; May 2026 template</span>
+          <span class="paper-no">AGR-2026-${l.id.replace('l','').padStart(4,'0')}</span>
+        </div>
+        <h2 class="paper-title">Standard Self Storage License Agreement</h2>
+        <p class="paper-meta">${ownerLine} ("Facility Owner") and ${esc(l.customerName)} ("Storer") &middot; ${todayStr}</p>
+
+        <div class="paper-section">I. Storer Details</div>
+        <table class="paper-table">
+          <tr><td>Name</td><td>${esc(l.customerName)}</td></tr>
+          <tr><td>Email Address</td><td>${esc(l.customerEmail)}</td></tr>
+          <tr><td>Contact No.</td><td>On file with Sitelink</td></tr>
+        </table>
+
+        <div class="paper-section">III. Storage Details</div>
+        <table class="paper-table">
+          <tr><td>Facility Location</td><td>${esc(facilityLocation(fac))}</td></tr>
+          <tr><td>Storage Unit No.</td><td>${esc(l.unit)}</td></tr>
+          <tr><td>Unit Type</td><td>${esc(unitSizeLabel(l, fac))}</td></tr>
+          <tr><td>Storage Plan Period</td><td>From ${esc(l.startDate)}, renews monthly thereafter (14 days' written notice to terminate)</td></tr>
+        </table>
+
+        <div class="paper-section">IV. Fee Schedule</div>
+        <table class="paper-table">
+          <tr><td>Security Deposit</td><td>${money(l.rate, fac.currency)}</td></tr>
+          <tr><td>Monthly Storage Fee</td><td>${money(l.rate, fac.currency)} per month, inclusive of GST where applicable</td></tr>
+          <tr><td>Late Payment Fee</td><td>${money(Math.round(25 * currencyFactor(fac.currency)), fac.currency)} per 10 days overdue</td></tr>
+        </table>
+
+        <p class="paper-clause">The Storer agrees to use the Storage Unit solely for the storage of permitted goods, to pay all fees by the due date, and to comply with the Facility Owner's site access and safety rules set out in the full Terms and Conditions of this License Agreement. This Agreement renews automatically on a monthly basis after the Storage Plan Period above, and may be terminated by either party on 14 days' written notice. Reproduced here as a sample for prototyping only &mdash; this excerpt is not the complete License Agreement and is not binding.</p>
+
+        <p class="paper-note">Date of this Agreement: ${todayStr}</p>
+        ${signatureBlock(l.agreement, l.customerName)}
+      </div>
+    `;
+  }
+
+  function buildInsurancePaper(l){
+    const fac = getFacility(l.facility);
+    const isSg = fac.country === 'Singapore';
+    const ins = insuranceForLease(l, fac);
+    const appNo = `CS-${String(l.id.replace('l','')).padStart(4,'0')}-${fac.insCode || 'XX'}`;
+    const insurerLine = isSg
+      ? `Underwritten by MSIG Insurance (Singapore) Pte Ltd, under the group policy held by Storage Ventures Asia Pte Ltd and Extra Space Singapore Holdings Pte Ltd.`
+      : `Underwritten under ${esc(fac.country)}'s local group storage-insurance arrangement (template adapted from the Singapore group policy wording; no separate ${esc(fac.country)} rate table was supplied).`;
+    const factor = currencyFactor(fac.currency);
+    const rateTableRows = INSURANCE_RATE_TABLE.map((t, i) => {
+      const sum = Math.round(t.sum * factor);
+      const premium = Math.round(t.premium * factor * 100) / 100;
+      const cls = i === ins.tierIdx ? ' class="active"' : '';
+      return `<tr><td${cls}>${money(sum, fac.currency)}</td><td${cls}>${money(premium, fac.currency)}</td></tr>`;
+    }).join('');
+    return `
+      <div class="paper">
+        <div class="paper-watermark">SAMPLE</div>
+        <div class="paper-topline">
+          <span class="paper-badge">Customer Storage Insurance Application Form</span>
+          <span class="paper-no">Application No: ${esc(appNo)}</span>
+        </div>
+        <h2 class="paper-title">Customer Storage Insurance Application Form</h2>
+        <p class="paper-meta">Extra Space Singapore Holdings Pte Ltd &middot; Policyholder: ${esc(l.customerName)} &middot; ${todayStr}</p>
+
+        <table class="paper-table">
+          <tr><td>Name of Storer/Customer</td><td>${esc(l.customerName)}</td></tr>
+          <tr><td>Contact Details</td><td>On file with Sitelink</td></tr>
+          <tr><td>Correspondence/Postal Address</td><td>On file with Sitelink</td></tr>
+          <tr><td>Storage Location</td><td>${esc(facilityLocation(fac))}</td></tr>
+          <tr><td>Storage Unit No.</td><td>${esc(l.unit)}</td></tr>
+          <tr><td>Coverage Effective Date</td><td>${esc(l.startDate)}</td></tr>
+          <tr><td>Value of Goods Insured (Sum Insured)</td><td>${money(ins.sum, fac.currency)}</td></tr>
+          <tr><td>Premium Per Month</td><td>${money(ins.premium, fac.currency)} (premium excludes GST)</td></tr>
+        </table>
+
+        <div class="paper-section">Sum Insured &amp; Premium Range</div>
+        <table class="paper-rate-table">
+          <tr><th>Sum Insured</th><th>Premium / Month</th></tr>
+          ${rateTableRows}
+        </table>
+        ${isSg ? '' : `<p class="paper-note">Figures above are scaled from the real Singapore rate table for prototyping &mdash; no equivalent ${esc(fac.country)} rate card was supplied.</p>`}
+
+        <p class="paper-clause">Cover excludes cash, deeds, jewellery and watches, motor vehicles, boats, and flammable or corrosive goods, and is subject to a policy excess starting at ${money(ins.excess, fac.currency)} per claim (a higher excess applies for named perils such as landslip, subsidence, or weather and water damage &mdash; see the full Key Information Summary). Claims are settled on a replacement-value basis for goods under 10 years old, and on an indemnity-value basis thereafter. ${insurerLine} Reproduced here as a sample for prototyping only &mdash; this excerpt is not the complete policy wording and is not binding.</p>
+
+        ${signatureBlock(l.insurance, l.customerName)}
+      </div>
+    `;
+  }
+
+  function renderLeaseDocument(docType){
+    const l = getLease(activeLeaseId);
+    const d = l[docType];
+    const paper = docType === 'agreement' ? buildAgreementPaper(l) : buildInsurancePaper(l);
+    showOverlay(`
+      <div class="modal modal-doc">
+        <div class="modal-header">
+          <button class="icon-btn" data-back>${ICONS.back}</button>
+          <div class="modal-title">${docType === 'agreement' ? 'Rental Agreement' : 'Insurance Certificate'}</div>
+          <button class="icon-btn" data-close>${ICONS.close}</button>
+        </div>
+        <div class="modal-body doc-body">${paper}</div>
+        <div class="modal-footer">
+          ${d.signed
+            ? `<div class="footer-status">&check; Signed ${esc(formatDate(d.signedAt))}</div><button class="btn-ghost" data-resign>Sign Again</button>`
+            : `<button class="btn-new" data-sign>Sign Document</button>`}
+        </div>
+      </div>
+    `);
+    root.querySelector('[data-back]').addEventListener('click', renderLeaseMenu);
+    root.querySelector('[data-close]').addEventListener('click', closeModal);
+    const signBtn = root.querySelector('[data-sign]');
+    if(signBtn) signBtn.addEventListener('click', () => openSigning(docType));
+    const resignBtn = root.querySelector('[data-resign]');
+    if(resignBtn) resignBtn.addEventListener('click', () => openSigning(docType));
+  }
+
+  /* ---- signing screen ---- */
+  function openSigning(docType){
+    pendingDocType = docType;
+    showFullScreen(`
+      <div class="sign-screen">
+        <div class="sign-header">
+          <button class="icon-btn" data-cancel>${ICONS.close}</button>
+          <div class="sign-title">Sign ${docType === 'agreement' ? 'Rental Agreement' : 'Insurance Certificate'}</div>
+          <div style="width:40px"></div>
+        </div>
+        <div class="sign-hint">Use your finger or Apple Pencil to sign in the box below</div>
+        <div class="sign-pad-wrap">
+          <canvas id="sig-canvas"></canvas>
+          <div class="sign-line"></div>
+          <div class="sign-placeholder" id="sig-placeholder">Sign here</div>
+        </div>
+        <div class="sign-actions">
+          <button class="btn-ghost" id="sig-clear">Clear</button>
+          <button class="btn-new" id="sig-confirm" disabled>Confirm Signature</button>
+        </div>
+      </div>
+    `);
+
+    root.querySelector('[data-cancel]').addEventListener('click', () => renderLeaseDocument(pendingDocType));
+
+    const canvas = document.getElementById('sig-canvas');
+    const wrap = canvas.parentElement;
+    const ctx = canvas.getContext('2d');
+    let drawing = false, lastX = 0, lastY = 0;
+
+    function sizeCanvas(){
+      const rect = wrap.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.round(rect.width * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.scale(dpr, dpr);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#17213a';
+    }
+    sizeCanvas();
+
+    function pos(e){
+      const r = canvas.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top, p: (e.pressure && e.pressure > 0) ? e.pressure : 0.5 };
+    }
+    function start(e){
+      if(e.pointerType === 'mouse' && e.button !== 0) return;
+      canvas.setPointerCapture(e.pointerId);
+      drawing = true;
+      document.getElementById('sig-confirm').disabled = false;
+      const ph = document.getElementById('sig-placeholder'); if(ph) ph.style.display = 'none';
+      const p = pos(e); lastX = p.x; lastY = p.y;
+      e.preventDefault();
+    }
+    function move(e){
+      if(!drawing) return;
+      const events = (e.getCoalescedEvents && e.getCoalescedEvents()) || [e];
+      events.forEach(ev => {
+        const p = pos(ev);
+        ctx.lineWidth = ev.pointerType === 'pen' ? Math.max(1.3, Math.min(4.5, p.p * 4.5)) : 2.6;
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        lastX = p.x; lastY = p.y;
+      });
+      e.preventDefault();
+    }
+    function end(){ drawing = false; }
+
+    canvas.addEventListener('pointerdown', start);
+    canvas.addEventListener('pointermove', move);
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointercancel', end);
+    canvas.addEventListener('pointerleave', (e) => { if(drawing) end(e); });
+
+    document.getElementById('sig-clear').addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById('sig-confirm').disabled = true;
+      const ph = document.getElementById('sig-placeholder'); if(ph) ph.style.display = '';
+    });
+
+    document.getElementById('sig-confirm').addEventListener('click', () => {
+      const dataUrl = canvas.toDataURL('image/png');
+      const l = getLease(activeLeaseId);
+      l[pendingDocType].signed = true;
+      l[pendingDocType].signedAt = new Date();
+      l[pendingDocType].signature = dataUrl;
+      const docType = pendingDocType;
+      renderLeaseRows();
+      renderLeaseDocument(docType);
+      showToast((docType === 'agreement' ? 'Agreement' : 'Insurance certificate') + ' signed');
+    });
+  }
+
+  /* ================= modal plumbing ================= */
+  function showOverlay(html, opts){
+    opts = opts || {};
+    root.hidden = false;
+    root.innerHTML = `<div class="overlay" id="overlay">${html}</div>`;
+    document.body.style.overflow = 'hidden';
+    if(!opts.noBackdropClose){
+      document.getElementById('overlay').addEventListener('click', (e) => {
+        if(e.target.id === 'overlay') closeModal();
+      });
+    }
+  }
+  function showFullScreen(html){
+    root.hidden = false;
+    root.innerHTML = html;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(){
+    root.hidden = true;
+    root.innerHTML = '';
+    document.body.style.overflow = '';
+    activeCustomerId = null;
+    activeLeaseId = null;
+    pendingDocType = null;
+  }
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && !root.hidden){
+      if(root.querySelector('.sign-screen')) renderLeaseDocument(pendingDocType);
+      else closeModal();
+    }
+  });
+
+  let toastTimer;
+  function showToast(msg){
+    let t = document.getElementById('toast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'toast'; t.className = 'toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    requestAnimationFrame(() => t.classList.add('show'));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  /* ================= init ================= */
+  renderCustomerRows();
+  renderCountryFilter();
+  renderFacilitySelect();
+  renderLeaseRows();
+  document.getElementById('facility-select').addEventListener('change', (e) => {
+    currentFacility = e.target.value;
+    renderLeaseRows();
+  });
+  document.getElementById('lease-new-btn').addEventListener('click', openAddLeaseModal);
+
+  document.getElementById('refresh-site-btn').addEventListener('click', () => {
+    if(currentFacility === 'all'){
+      showToast('Pick a specific facility to refresh just that site.');
+      return;
+    }
+    const fac = getFacility(currentFacility);
+    showToast('Refreshing ' + fac.name + '…');
+    setTimeout(() => showToast(fac.name + ' is up to date.'), 700);
+  });
+
+  document.getElementById('refresh-all-btn').addEventListener('click', () => {
+    showToast('Refreshing all ' + facilities.length + ' sites from Sitelink…');
+    setTimeout(() => showToast('All sites refreshed — this used a full round of Sitelink API calls, so use it sparingly.'), 1200);
+  });
+
+  setPage('leases');
+})();
+</script>
+
+</body></html>

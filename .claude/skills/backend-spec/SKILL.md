@@ -1,37 +1,52 @@
 ---
 name: backend-spec
 description: >-
-  ExtraSpace platform backend specification for re-implementing (or changing) the backend in
-  C# / ASP.NET Core. Use when building, porting, or reviewing any backend feature or API endpoint:
-  auth, SiteLink units/reservations/leases, Stripe payments and webhook, leads/viewings, facility
-  booking, BizPlus credits, Cowork Manager (units, licences, invoices, payments, outbox), rewards,
-  CMS, admin console/RBAC/generic CRUD, cron jobs, database tables, or env configuration.
+  ExtraSpace demo handover spec, used as the feature reference for the brand-new C# / ASP.NET Core
+  monolith. Use when designing, building, or reviewing any feature or API endpoint: auth, SiteLink
+  units/reservations/leases, Stripe payments and webhook, leads/viewings, facility booking, BizPlus
+  credits, Cowork Manager (units, licences, invoices, payments, outbox), rewards, CMS, admin
+  console/RBAC, cron jobs, database tables, or configuration.
 ---
 
-# ExtraSpace backend spec
+# ExtraSpace demo spec (feature reference)
 
-The spec lives in the client's reference repo:
+The spec lives in the demo repo:
 `/Users/waiyanmin/Projects/Extra Space/Backend Demo/backend/.claude/backend-spec/` (call it `SPEC` below).
-It is the contract for the C# repo (`../CMS`): the existing Flutter app and React admin UI must keep
-working unchanged. The reference repo is read-only; corrections go to `docs/notes/` in the workspace root.
+It describes the PM's demo. The new monolith is written from scratch and owes the demo nothing
+(owner, 2026-10-09): the spec is a reference for **what a feature does**, not a contract for how
+we build it. For rules the demo lacks (points, tiers, autopay, bills from SiteLink), read
+`docs/notes/old-backend/`. The client's own Claude prototypes are a third reference: read
+`docs/notes/client-artifacts/` (Cowork Manager, ES App, Admin) for the same feature. Each note has a
+rule-by-rule comparison with this spec. Where they disagree, do not pick one: list the conflict for
+the PM (`.claude/rules/cross-repo.md` §4, open decision 8). The demo repo is read-only; corrections
+go to `docs/notes/` here.
 
 ## Procedure
 
-1. Read `SPEC/00-architecture-and-conventions.md` once per session (pipeline, error envelope, auth,
-   DB conventions, rounding and time-zone parity traps).
-2. Find the feature: `SPEC/reference/endpoints.md` maps every route to its doc (`features/01…12`).
-   Read that feature doc fully before writing code — especially *Business rules & algorithms*,
-   *Edge cases* and *C# implementation notes*. Then open the TS files it cites.
-3. For tables, use the feature doc's *Data model* section; exact DDL is `SPEC/reference/schema.sql`,
-   relations are easiest to read in `SPEC/reference/schema.prisma`.
-4. For `/api/v1/*` JSON shapes, cross-check `SPEC/reference/openapi.json`.
-5. Implement the feature doc's *Acceptance tests* as xUnit tests alongside the code.
-6. Follow the build order and parity checks in `SPEC/13-csharp-port-plan.md`.
+1. Read `SPEC/00-architecture-and-conventions.md` once per session, for the demo's conventions and
+   the traps it found (time zones, rounding, SiteLink quirks).
+2. Find the feature: `SPEC/reference/endpoints.md` maps every demo route to its doc
+   (`features/01…12`). Read that feature doc fully, especially *Business rules & algorithms*,
+   *Edge cases* and *Acceptance tests*. Open the TS files it cites when a rule is unclear.
+3. Use the *Data model* section and `SPEC/reference/schema.prisma` to understand the entities. Our
+   own schema is designed in the design spec and may differ.
+4. For SiteLink calls, spec 02 + the live WSDL (`docs/notes/sitelink/`) give the exact operation
+   and field names. Those ARE binding, because SiteLink is external.
+5. Port the acceptance tables we keep as xUnit `[Theory]` data.
+6. In the design or plan, list which spec rules we keep and which we change.
 
-## Non-negotiables
+## Not binding
 
-- Same routes, same JSON field names/casing, same error `code`s and status codes.
-- Keep the existing PostgreSQL schema; money is `double precision`; JS half-up rounding.
-- Asia/Singapore business dates; UTC storage.
-- No card data; Stripe only via hosted Checkout + verified webhook for the authorised flows.
-- Never commit secrets — env var names only (`SPEC/reference/env-vars.md`); `extraspace-tech/cms` is public.
+Routes, JSON shapes, error codes, the schema, env var names, `double` money with JS half-up
+rounding, the port plan's phases and its parity checks.
+
+## Never copy
+
+The demo's defects:
+- email-only login
+- missing ownership checks
+- client-reported payment amounts
+- the hard-coded anon key
+- billing maths in the admin browser code
+
+See `.claude/rules/backend-demo.md`.

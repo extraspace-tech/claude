@@ -1,6 +1,6 @@
 {
     // Workspace-root launch configs. VS Code uses the .vscode of the folder you OPEN.
-    // Fill the program path and port once the C# solution exists in ../CMS (port plan phase 1).
+    // Fill the program path and port once the C# solution exists in ../CMS (phase 1).
     "version": "0.2.0",
     "configurations": [
         {

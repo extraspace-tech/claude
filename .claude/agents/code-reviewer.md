@@ -22,6 +22,6 @@ When the task is "review an implementation against a plan or brief":
 5. Check the implementer's report against the code: a claimed fix that is not in the diff, or a change the report does not mention, is a finding.
 6. Build the named csproj. Report errors only.
 
-House facts that are NOT findings: migrations are run by hand from `docs/migrations/`; the PostgreSQL schema is frozen by the spec; money is `double` with JS half-up rounding; the public repo rule (no secrets) is a P0 finding when broken.
+House facts that are NOT findings: migrations are run by hand from `docs/migrations/`; the PostgreSQL schema is ours (EF Core migrations; the demo's schema is only a reference); money is `numeric`/`decimal` through one rounding helper; the public repo rule (no secrets) is a P0 finding when broken.
 
 Use the output format the calling prompt specifies. If it gives none, return findings ranked P0/P1/P2, each with file:line and a concrete failure scenario, then a one-line verdict.

@@ -9,8 +9,9 @@ Set up 2026-10-09 at the user's request: "do the same claude set up for another 
 
 - `Claude/` = context repo and workspace root (`.claude/`, `.cursor/`, `docs/`, memory). Not a client repo; never push it to the client org.
 - `../CMS` = `extraspace-tech/cms` (public, "CMS + API in C#"), the new repo. Empty except README on 2026-10-09 (one commit).
-- `../Backend Demo/backend` = `extraspace-tech/backend` (private), the Node reference; handover spec at `.claude/backend-spec/` (commit `6be4474`, 2026-10-08, "for a C# re-implementation"). A PreToolUse hook blocks every edit there.
-- `../API` = empty folder, purpose not decided.
+- `../Backend Demo/backend` = `extraspace-tech/backend` (private), the PM's Node **prototype** (not production; corrected 2026-10-09, see [[project-system-landscape]]); handover spec at `.claude/backend-spec/` (commit `6be4474`, 2026-10-08, "for a C# re-implementation"). A PreToolUse hook blocks every edit there.
+- `../API` = `extraspace-tech/es-api` (README only on 2026-10-09), purpose not decided.
+- `../../Extra Space old/extraspace-backend` = `sgcodigo/extraspace-backend`, the OLD production system (.NET Core 3.1 + MySQL). Added 2026-10-09 to `additionalDirectories`; the PreToolUse hook blocks edits there (tested: exit 2). 🔴 live secrets committed. `../../Extra Space old/ExtraSpaceAPI|ExtraSpaceCMS` = non-git snapshot.
 - Code repos are siblings of the context repo (unlike Porsche where they were children); `.claude/settings.json` lists them in `permissions.additionalDirectories` (🔴 not verified at first start yet, see [[project-setup-owed]]).
 - Memory link: `~/.claude/projects/-Users-waiyanmin-Projects-Extra-Space-Claude/memory` → `Claude/.claude/memory` (created 2026-10-09; confirm the encoded name after the first start).
 - Local tools on this machine: `dotnet 10.0.400`, `node v24.18.0`.

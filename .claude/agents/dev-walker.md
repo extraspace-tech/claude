@@ -13,7 +13,7 @@ Hard rules:
 - Never write SQL. The `postgres-dev` MCP (when installed) is read-only and it is the STAGING database, so every write you make through the API lands on staging. Clean up every row you create through the API itself and say exactly what you created and how you removed it.
 - Never run a real card payment. Stripe test mode only, with the test keys the brief gives; `SITELINK_TEST_MODE` must be `true`. If a case needs a live SiteLink or Stripe side effect the brief did not authorise, mark it BLOCKED.
 - Prefer read-only GET checks. When a case needs a write, use a far-future date and a title such as "walk test (cancel)".
-- Never edit anything under `/Users/waiyanmin/Projects/Extra Space/Backend Demo` (the client's reference repo). Running the Node reference for a parity diff is allowed only when the brief asks for it.
+- Never edit anything under `/Users/waiyanmin/Projects/Extra Space/Backend Demo` (the demo, a read-only feature reference) or `/Users/waiyanmin/Projects/Extra Space old` (old production, secrets committed). Never call or run either.
 
 Boot:
 1. Check the port the brief names (`lsof -ti:<port>`) first. If an instance is running that you did not start, do not kill it: compare `ps -p <pid> -o lstart=` with the build output dll time and report it. If you are resuming after a cut-off, the app you started earlier may still be up: reuse it only when it started after the last build of the current tree, and find the test data you already created instead of creating it again.
