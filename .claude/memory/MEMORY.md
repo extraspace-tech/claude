@@ -2,7 +2,7 @@
 
 - [Setup owed (RESUME)](project_setup_owed.md) — ⭐ RESUME HERE: S0 spec awaits owner review → then writing-plans; open owner/IT items (repo private, AWS account, Entra, SES, host, freeze policy, account deletion).
 - [System landscape](project_system_landscape.md) — ⭐ brand-new C# monolith in CMS/ = functional copy of the Node demo (read-only reference); old Codigo system + Lucy untouched/retired; all owner decisions of 2026-10-09.
-- [AWS cost estimate](reference_aws_cost_estimate.md) — v3 SG+MY one platform: launch $437/mo, budget ceiling ≈ $500, after tuning ≈ $270–330; sized on real old-prod usage; client page URL, unit prices, measured volumes.
+- [AWS cost estimate](reference_aws_cost_estimate.md) — v4 (PM budget $1,000–1,500): $1,019/mo, budget ≈ $1,170, ≈ $906 with DB RI; m8g.large + Proxy, api/jobs split, Valkey, 2 NAT, WAF; client page URL, unit prices.
 - [Client artifacts](reference_client_artifacts.md) — client's own Claude prototypes (Cowork Manager, ES App, Admin): links, extracted rules in docs/notes/client-artifacts/, conflicts vs demo OPEN.
 - [Backend owner](user_backend_owner.md) — user is the ONLY backend dev; prefers MVC controllers; keep layout simple.
 - [Workspace layout](project_workspace_layout.md) — Claude/ = context repo (start here); siblings CMS/ (the monolith, PUBLIC), Backend Demo/backend (demo + spec, READ ONLY), API/ (es-api, unused); Extra Space old/ (READ ONLY, secrets).

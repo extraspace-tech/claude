@@ -1,11 +1,19 @@
 ---
 name: reference-aws-cost-estimate
-description: AWS cost estimate v2 (SG + MY on one platform, sized on measured old-system usage) ≈ US$328/mo, published 2026-10-09 for the client; prices from AWS's public price list.
+description: AWS cost estimate v4 (current, 2026-10-10) SG + MY, performance sizing within the PM's US$1,000–1,500 budget: US$1,019/mo, budget ≈ US$1,170; client page URL, unit prices, measured volumes.
 metadata:
   type: reference
 ---
 
-- **v3 (CURRENT, page version 3; owner asked for a realistic figure with headroom):**
+- **v4 (CURRENT, page version 4, 2026-10-10):** PM raised the budget to US$1,000–1,500 for best performance.
+  - Total **$1,019.18/mo**; budget ≈ **$1,170** (+15%); ≈ $906 with a 1-yr no-upfront DB RI ($0.3135/h, −$112.78). Yearly ≈ $12,230, with buffer ≈ $14,065.
+  - Prod $810.38: api 2 × 2 vCPU/4 GB $143.93 (auto-scale to 4, +$71.96 per extra task-month), jobs 1 × 1 vCPU/2 GB $35.98, ALB $21.32, WAF $13.00 (est.), 2 NAT $87.32, 4 IPv4 $14.60, RDS `db.m8g.large` Multi-AZ $341.64 ($0.468/h; same price as m7g), RDS Proxy $26.28 ($0.018/vCPU-h, 2 vCPU), 50 GB gp3 + 35-day backups $15.70, Database Insights advanced $18.25 ($0.0125/vCPU-h), Valkey 2 × `cache.t4g.small` $56.06 ($0.0384/h), secrets $4.80, CloudWatch $30.00 (est.), ECR $0.50, SES $1.00.
+  - Staging $208.80: 1 × 1 vCPU/2 GB $35.98, ALB, 1 NAT $43.37, 3 IPv4, `db.t4g.medium` single-AZ $74.46, 20 GB, Valkey `t4g.micro` $14.02, secrets, logs, SES.
+  - Next DB size (4 vCPU / 16 GB Multi-AZ) ≈ +$342 (priced from `db.m7g.xlarge` $0.937/h; m8g.xlarge not read).
+  - Estimated, not from the price list: CloudWatch $30 (log volume, Container Insights), WAF request count.
+  - Told the user: more hardware cannot make SiteLink answer faster; the cache hides it.
+  - Source: `docs/notes/aws-cost/aws-cost-estimate-v4.html` (v3 kept next to it).
+- **v3 (superseded by v4; owner asked for a realistic figure with headroom):**
   - Launch size **$437.36/mo**: prod $316.79 (2 × 1 vCPU / 2 GB tasks $71.96 + `db.t4g.medium` Multi-AZ $148.19; the rest as in v2); staging $120.57.
   - **Budget ceiling ≈ $500/mo**: +15% buffer for logs, data transfer, t4g burst CPU and unmeasured BizPlus/Cowork load. ≈ $5,250/yr at launch size, ≈ $6,040/yr with the buffer.
   - **Expected after 1–2 months of tuning ≈ $270–330**: −$109.71 to the v2 size, −$43.37 for staging without NAT, −$15.84 to −$31.03 for the DB reservation (reserve only after the size settles).
@@ -20,7 +28,7 @@ metadata:
   - SG (Oct 2025 – Jul 2026 average; payments fell from Aug 2026 when autopay was switched off): 3,630 payments, 2,850 paying members, 2,300 sign-ins and 330k SiteLink calls per month; peak hour 9,772 calls; 9,097 members; 1.2 GB business data.
   - MY (12-month average): 770 payments, 490 paying members, 560 sign-ins and 188k SiteLink calls per month; peak hour 4,080 calls; 1,712 members; 0.13 GB.
 - v1 below (SG only, guessed sizing, $448) is SUPERSEDED.
-- Page: https://claude.ai/artifact/C63e3WBUBYpEpPnm64cqi7 (now on version 2). Sharing: the owner has shared it with specific people (status at v2); sharing is changed only from the page's Share menu. Its source HTML was in the session scratchpad, which is temporary.
+- Page: https://claude.ai/artifact/C63e3WBUBYpEpPnm64cqi7 (now on version 4). Sharing: the owner has shared it with specific people (status at v2); sharing is changed only from the page's Share menu. Its source HTML was in the session scratchpad, which is temporary.
 - **v1 totals (SUPERSEDED)** (USD/month, on-demand, before GST, `ap-southeast-1`, 730 h):
 
   | Environment | Sizing | Total |

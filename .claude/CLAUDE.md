@@ -64,7 +64,7 @@ a third rule reference; where they disagree with the demo is an OPEN question fo
 
 Clients and external systems of the **new** system (details: `.claude/rules/cross-repo.md`): our
 Flutter app (`/api/v1/*`), the admin back office (React SPA), SiteLink CCWs 3.5, Stripe, and AWS
-(ECS Fargate + ALB, RDS PostgreSQL, SES, Secrets Manager; S3 from S2; ElastiCache only if S1 proves it is needed). The email, SMS and
+(ECS Fargate + ALB + WAF, RDS PostgreSQL + RDS Proxy, SES, Secrets Manager; ElastiCache Valkey from S1; S3 from S2; sizing = cost estimate v4). The email, SMS and
 push providers are decided in the design spec. The old system's integrations (Noke, UniqGift, WOGI,
 SMSGlobal, Firebase) are not in scope unless the owner adds them.
 

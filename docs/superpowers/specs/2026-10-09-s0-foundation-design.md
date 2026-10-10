@@ -89,8 +89,8 @@ House rules for the layout:
 In order:
 
 1. Forwarded headers (behind the ALB)
-2. Request id / trace id
-3. Serilog request logging
+2. Trace id: read the W3C `traceparent` if present, set `X-Trace-Id` on the response, push `traceId`, `correlationId`, `albTraceId`, client headers into the log context
+3. Serilog request logging (one summary line per request, §4.4)
 4. Exception handler
 5. Security headers
 6. HTTPS redirection, off behind the ALB (TLS ends at the ALB)
@@ -108,11 +108,60 @@ In order:
 
 The Flutter app sends `X-App-Platform: ios|android|web` and `X-App-Version: <semver>`. Config `App:MinVersion:{Platform}` sets the lowest allowed version. If the header is present and below the minimum, the API answers `426` with `code = "APP_UPDATE_REQUIRED"`. Requests without the headers (admin UI, health checks, tools) pass.
 
-### 4.4 Logging
+### 4.4 Logging and tracing (owner, 2026-10-10: structured and easy to trace)
 
-- Serilog writes JSON to stdout; ECS ships it to CloudWatch Logs.
-- Every line carries the trace id.
-- Never log tokens, codes, cookies, `Authorization` headers, full request or response bodies, or personal data beyond ids.
+**Goal:** from one id that a user, the app or the admin UI shows, find every log line of that request, of the jobs it started and of the outside calls it made, in one query.
+
+**Ids that tie lines together**
+
+| Field | What it is | Where it comes from |
+|---|---|---|
+| `traceId` | W3C trace id of the current request or job run | ASP.NET Core `Activity` (built in). Returned on **every** response as header `X-Trace-Id` and in every error body (§4.1). |
+| `correlationId` | The `traceId` of the request that started a chain. A request's own `traceId` = its `correlationId`. | Carried into every Hangfire job it enqueues (§7) and into the outbox rows of S1, so a job run 10 minutes later still points back to the original request. |
+| `albTraceId` | The ALB's `X-Amzn-Trace-Id` | Request header, logged so ALB and WAF records can be matched. |
+| `jobId`, `jobName` | Hangfire job | Job filter (§7). |
+
+The Flutter app and the admin UI show `traceId` on every error (admin: in the error toast with a copy button; app: on the error screen and in any support report).
+
+**Line format.** Serilog writes one JSON object per line to stdout (`CompactJsonFormatter`: `@t` UTC timestamp, `@l` level, `@mt` template, `@m` rendered message, `@x` exception, plus properties). ECS ships it to CloudWatch Logs. Every line carries:
+
+- always: `traceId`, `spanId`, `correlationId`, `app` (`ExtraSpace`), `env`, `role` (`api` / `jobs` / `all`), `version` (git SHA), `taskId` (ECS task), `SourceContext`, `feature` (from the namespace, for example `Identity`)
+- in a request: `method`, `route` (the route template, not the raw path), `albTraceId`, `clientPlatform`, `clientVersion`, and after sign-in `customerId` or `staffId` (ids only)
+- when known: `siteId`, `country`
+- in a job: `jobId`, `jobName`, `attempt`
+
+**What gets logged**
+
+- **One summary line per request** (Serilog request logging): method, route, status, `elapsedMs`. Level: Information below 500, except 403 and 429 at Warning (possible abuse); Error for 5xx. `/health/*` is not logged unless it fails.
+- **Business events** at Information with a fixed message template and named properties, for example `"Login code sent to customer {CustomerId}"`, `"Refresh token family {FamilyId} revoked: reuse detected"`. One line per meaningful state change, not per method call.
+- **Every outside call** (SES in S0; SiteLink and Stripe from S1) logs one line: `integration`, `operation` (for SiteLink the WSDL operation name), `elapsedMs`, `outcome` (`ok` / `error` / `timeout` / `circuit-open`), `httpStatus`, `attempt`. Request and response bodies are never logged in production. Whether staging may log redacted SOAP bodies is decided in S1.
+- **Slow database commands:** an EF Core `DbCommandInterceptor` logs a Warning for any command over 500 ms (`Logging:SlowQueryMs`), with the command text and `elapsedMs`, never parameter values.
+- **Exceptions:** logged once, by the exception handler (§4.1), with the full stack, at Error. Code below it does not log-and-rethrow.
+- **Jobs:** start, success (`elapsedMs`) and failure (Error, with `attempt`); a job that exhausts its retries logs `"Job {JobName} failed permanently"`, which an alarm watches.
+
+**Levels in production:** Default Information; `Microsoft.AspNetCore` and `Microsoft.EntityFrameworkCore` Warning; `System.Net.Http` Warning; Debug off. Levels can be changed per namespace through config (`Serilog:MinimumLevel:Override:*`) with a task restart; no code change.
+
+**Code rules**
+
+- Use `ILogger<T>` with message templates and named placeholders; never string interpolation in a log call (analyzer CA2254 set to error).
+- Hot or repeated log lines use the `[LoggerMessage]` source generator.
+- Never log an entity, a DTO or a request object whole. Log ids.
+- 🔴 Never log: tokens, login codes, cookies, `Authorization` headers, passwords, Stripe secrets, connection strings, full request or response bodies, card data. Personal data: ids only; an email address only through `Pii.MaskEmail` (`j***@gmail.com`), and only where a support case needs it (the login flow).
+- A Serilog destructuring policy masks any property named like `*token*`, `*secret*`, `*password*`, `loginCode`, `authorization` or `cookie`, as a second line of defence. Login-code fields are named `loginCode` everywhere for this reason.
+
+**Local development:** console output in a readable text format, and the same JSON sent to a local **Seq** container (`docker-compose.yml`, `http://localhost:5341`, free for one developer) to search by `traceId` or any property. Seq is never used outside Development.
+
+**CloudWatch (§9.2):** log group per environment and role (`/extraspace/<env>/api`, `/extraspace/<env>/jobs`); retention production 90 days, staging 14 days. Saved CloudWatch Logs Insights queries, created by CDK:
+
+1. **Trace**: every line where `traceId` or `correlationId` = X, in time order (request → jobs → outside calls).
+2. **Errors** in the last hour, grouped by `route` / `jobName` and exception type.
+3. **Slow requests** over 1 s, and slow DB commands.
+4. **Outside-call failures** by `integration` and `operation`.
+5. **Activity of one customer or staff member** by `customerId` / `staffId`.
+
+Metric filters on Error lines, failed-permanently jobs and outside-call failures feed the alarms in §9.2.
+
+**Not in S0:** OpenTelemetry tracing to AWS X-Ray (a timeline per request across DB and outside calls). The ids above already join every line; add X-Ray later only if log queries prove too slow for a problem. It would add a collector sidecar per task (about US$9 a task a month) plus X-Ray fees.
 
 ### 4.5 Health and API docs
 
@@ -209,7 +258,8 @@ The Flutter app sends `X-App-Platform: ios|android|web` and `X-App-Version: <sem
 
 ## 7. Background jobs and email
 
-- **Hangfire** with `Hangfire.PostgreSql` (schema `hangfire`). Every app instance runs the Hangfire server; Hangfire guarantees one run per job.
+- **Job tracing:** a Hangfire client filter stores the current `correlationId` as a job parameter when a job is enqueued; a server filter starts a new `Activity` for the run and pushes `correlationId`, `jobId`, `jobName` and `attempt` into the log context (§4.4).
+- **Hangfire** with `Hangfire.PostgreSql` (schema `hangfire`). Hangfire guarantees one run per job. **Roles (owner, 2026-10-10, cost v4):** the same image runs as `App:Role=api` (no Hangfire server, only enqueues) or `App:Role=jobs` (Hangfire server, no public traffic). Production runs 1 jobs task; staging and local run one process with both roles (`App:Role=all`, the default).
 - Recurring jobs are **registered in code at start-up**. Each has an on/off switch `Jobs:<JobName>:Enabled` (default true) and can also be paused in the dashboard.
 - The dashboard is at `/admin/jobs`, behind admin SSO + `jobs.manage`.
 - Every job must be idempotent; its feature spec names the column or key that proves it.
@@ -254,11 +304,14 @@ The Flutter app sends `X-App-Platform: ios|android|web` and `X-App-Version: <sem
 ### 9.2 AWS (CDK stacks in `infra/`, one deploy per environment)
 
 - VPC across 2 availability zones; the ALB in public subnets; ECS tasks and RDS in private subnets.
-- NAT gateway with an Elastic IP, so outbound calls come from a fixed IP (in case SiteLink or a vendor allowlists IPs; to confirm in S1).
-- ECS Fargate service: staging 1 task; production 2 tasks across 2 zones, auto-scaling on CPU and request count.
-- RDS PostgreSQL: staging single-AZ, small; production Multi-AZ, 14-day automated backups, point-in-time restore, deletion protection.
+- NAT gateways with Elastic IPs, so outbound calls come from fixed IPs (in case SiteLink or a vendor allowlists IPs; to confirm in S1). Production: 2, one per zone, so an allowlist needs both IPs. Staging: 1.
+- Sizing follows the AWS cost estimate v4 (owner, 2026-10-10; `docs/notes/aws-cost/aws-cost-estimate-v4.html`):
+  - ECS Fargate ARM. Production: `api` service 2 × 2 vCPU / 4 GB across 2 zones, auto-scaling to 4 on CPU and request count; `jobs` service 1 × 1 vCPU / 2 GB. Staging: 1 × 1 vCPU / 2 GB running both roles.
+  - RDS PostgreSQL. Production: `db.m8g.large` Multi-AZ, 50 GB gp3 with storage auto-scaling, 35-day automated backups, point-in-time restore, deletion protection, Database Insights advanced mode, behind **RDS Proxy**. Staging: `db.t4g.medium` single-AZ, no proxy. Check in S0 that Npgsql + EF Core + Hangfire through RDS Proxy do not pin every connection (session state, prepared statements); if they do, connect directly and drop the proxy. Not verified yet.
+  - ElastiCache Valkey (production 2 × `cache.t4g.small` with failover, staging 1 × `cache.t4g.micro`) is budgeted; S1 decides what it caches (SiteLink unit and price data, rate limits). S0 does not create it.
+  - AWS WAF on the ALB: AWS managed core, known-bad-inputs, IP-reputation and SQL-injection rule groups, plus a rate-based rule.
 - ALB with an HTTPS listener (ACM certificate). The host name is OPEN.
-- ECR, Secrets Manager (app secrets passed into the task as environment variables), SES domain identity, CloudWatch log groups and alarms (5xx rate, failed jobs, unhealthy tasks).
+- ECR, Secrets Manager (app secrets passed into the task as environment variables), SES domain identity, CloudWatch log groups (per environment and role, retention §4.4), the saved Logs Insights queries of §4.4, metric filters, Container Insights and alarms (5xx rate, failed jobs, unhealthy tasks, jobs task down, DB CPU and connections).
 
 ### 9.3 CI/CD (GitHub Actions)
 
@@ -291,6 +344,7 @@ The Flutter app sends `X-App-Platform: ios|android|web` and `X-App-Version: <sem
   - the last Owner cannot be removed
   - the `xmin` conflict → 409
   - the architecture test (§3)
+  - logging: an error response carries the same `traceId` as its log lines and the `X-Trace-Id` header; a job enqueued by a request logs that request's `correlationId`; a full sign-in flow with captured log output contains no login code, token or unmasked email
 - Admin UI: type-check + build in CI. Playwright smoke tests start in S1.
 - Before S0 is called done, the `dev-walker` agent walks the staging flows in §11.
 
@@ -303,6 +357,7 @@ The Flutter app sends `X-App-Platform: ios|android|web` and `X-App-Version: <sem
 5. Every admin change in step 4 appears in the audit log.
 6. The Hangfire dashboard opens only for staff with `jobs.manage`. `IdentityHousekeeping` runs once per day with 2 tasks running.
 7. No secret is in the repo or in CI logs (checked with a secret scan in CI).
+8. On staging, the `traceId` shown on a forced error finds, with the saved **Trace** query, the request line, the exception and the lines of the email job it started.
 
 ## 12. Open items (owner or client IT)
 

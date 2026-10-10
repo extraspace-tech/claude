@@ -9,9 +9,10 @@ Open after the 2026-10-09 setup (copied from Porsche-AI). Tick off and delete li
 
 **RESUME (2026-10-09 evening):**
 - The brainstorm finished for S0. The spec is `docs/superpowers/specs/2026-10-09-s0-foundation-design.md` (316 lines).
+- 2026-10-10: logging and tracing added to the spec (§4.4, plus §4.2, §7, §9.2, §10, §11 item 8) at the owner's request.
 - It is WAITING for owner review. The next step after approval is the `superpowers:writing-plans` skill: the S0 implementation plan, split into parallel implementer pieces with their own file sets.
 - All decisions are in `.claude/rules/cross-repo.md` §4.
-- AWS cost estimate is at **v3** for SG + MY on one platform: launch $437/month, budget ceiling ≈ $500, about $270–330 after tuning. Page version 3. See [[reference-aws-cost-estimate]].
+- AWS cost estimate is at **v4** (2026-10-10, PM budget US$1,000–1,500): $1,019/month, budget ≈ $1,170. Page version 4. S0 spec §7/§9.2 now follow it (api/jobs roles, RDS Proxy to verify). See [[reference-aws-cost-estimate]].
 - The PM confirmed **SG + MY at release** (it replaced "Singapore only").
 - The client's own Claude artifacts were extracted to `docs/notes/client-artifacts/`. See [[reference-client-artifacts]].
 - Next sub-project specs (S1–S3) must read three references: the demo spec, the client-artifact notes and the old-backend notes. Where they disagree, ask the PM (cross-repo §4, open decision 8).
