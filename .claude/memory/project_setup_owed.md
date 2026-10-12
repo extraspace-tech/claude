@@ -1,6 +1,6 @@
 ---
 name: project-setup-owed
-description: ⭐ RESUME — S0-1 DONE 2026-10-12 (staging network + DB live, ≈ US$128/mo running; DB users created); code on branch s0-1-network-database uncommitted; NEXT = owner commits S0-1, then the S0-2 plan; plus open owner/IT items.
+description: ⭐ RESUME — S0-1 done + pushed; S0-2 merged to main (PR #1); NEXT = S0-3 plan; plus open owner/IT items.
 metadata:
   type: project
 ---
@@ -14,7 +14,8 @@ Open after the 2026-10-09 setup (copied from Porsche-AI). Tick off and delete li
   - Task 4 (`cdk diff` staging, read-only): done.
   - Task 5: **staging deployed 2026-10-12** (PM approved the ≈ US$128/mo; the owner ran `cdk deploy` in their own terminal because Claude Code blocks `--require-approval never`). Cost is running from 2026-10-12.
   - Task 6: DB users `es_app` / `es_readonly` + schema `hangfire` created on staging, TLS forced (checked). RDS needs `GRANT es_app TO postgres` … `REVOKE` around `CREATE SCHEMA … AUTHORIZATION es_app` (guide B5).
-  - **NEXT: the owner commits S0-1 in `../CMS` and pushes the branch (owner approved pushing while the repo is still PUBLIC, 2026-10-12, so the PM can see progress; still never an account id, endpoint or secret in the repo), then write the S0-2 plan.**
+  - S0-1 committed and pushed by the owner to `main` (`84b8475`, 2026-10-12; owner approved pushing while the repo is PUBLIC).
+- **S0-2 IMPLEMENTED 2026-10-12** on branch `s0-2-api-platform` in `../CMS`, NOT committed (owner commits): build 0/0, 130 tests (Api 80, Engines 18, Infra 32), local run checked (health, 404 problem + X-Trace-Id, OpenAPI, Swagger, Seq). Migration script `docs/migrations/2026-10-12-initial-platform.sql` (not yet run on staging; S0-6 runs it before the first deploy). The nullable-enum OpenAPI residual was fixed the same day (130 tests). Carry-overs for S0-3…S1: plan index. **Merged to `main` via PR #1 (`9b0f86b`). NEXT: write the S0-3 plan.**
   - Production stacks are written and tested but not deployed (deploy before go-live). Before the first production deploy, verify the RDS Proxy target-group tags (CloudFormation schema allows them; checked 2026-10-12).
 - **After S0-1:** write the S0-2 plan (API platform). S0-6 infra can run in parallel.
 - **AWS account facts and rules:** [[reference-aws-account]]. Never the `default` profile (Porsche); always `--profile extraspace --region ap-southeast-1`.

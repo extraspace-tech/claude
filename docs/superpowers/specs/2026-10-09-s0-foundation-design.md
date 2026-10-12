@@ -78,11 +78,12 @@ House rules for the layout:
 
 ```json
 { "type": "about:blank", "title": "The code is wrong or has expired", "status": 400,
-  "code": "INVALID_CODE", "traceId": "00-4bf9...-01" }
+  "code": "INVALID_CODE", "traceId": "4bf92f3577b34da6a3ce929d0e0e4736" }
 ```
 
 - Validation errors: status 400, `code = "VALIDATION_FAILED"`, plus `errors: { "<field>": ["message"] }`. These come from `[ApiController]` model validation, mapped to our shape by one `InvalidModelStateResponseFactory`.
 - Business errors are thrown as one `AppException(status, code, title)` and mapped by one exception handler (`IExceptionHandler`). Unknown exceptions become 500 `INTERNAL_ERROR` without internal details; the details go to the log.
+- Statuses without their own code: a bare 400 → `VALIDATION_FAILED`, 401/403/404/409/426/429/5xx → the codes below, anything else → `HTTP_<status>` (S0-2 decision 7). An EF concurrency failure and a PostgreSQL unique violation become `409 CONFLICT`.
 - S0 codes: `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, `APP_UPDATE_REQUIRED`, `INVALID_CODE`, `TOO_MANY_ATTEMPTS`, `INTERNAL_ERROR`. Each later feature adds its own codes in its own spec.
 
 ### 4.2 Request pipeline
@@ -124,9 +125,9 @@ The Flutter app sends `X-App-Platform: ios|android|web` and `X-App-Version: <sem
 
 The Flutter app and the admin UI show `traceId` on every error (admin: in the error toast with a copy button; app: on the error screen and in any support report).
 
-**Line format.** Serilog writes one JSON object per line to stdout (`CompactJsonFormatter`: `@t` UTC timestamp, `@l` level, `@mt` template, `@m` rendered message, `@x` exception, plus properties). ECS ships it to CloudWatch Logs. Every line carries:
+**Line format.** Serilog writes one JSON object per line to stdout (Serilog.Expressions template, plain field names because CloudWatch Logs Insights reserves names starting with `@`: `timestamp` UTC, `level`, `messageTemplate`, `message`, `exception`, `traceId`, `spanId`, plus properties; S0-2 decision 2). ECS ships it to CloudWatch Logs. Every line carries:
 
-- always: `traceId`, `spanId`, `correlationId`, `app` (`ExtraSpace`), `env`, `role` (`api` / `jobs` / `all`), `version` (git SHA), `taskId` (ECS task), `SourceContext`, `feature` (from the namespace, for example `Identity`)
+- always: `traceId`, `spanId`, `correlationId`, `app` (`ExtraSpace`), `env`, `role` (`api` / `jobs` / `all`), `version` (git SHA), `SourceContext`, `feature` (from the namespace, for example `Identity`)
 - in a request: `method`, `route` (the route template, not the raw path), `albTraceId`, `clientPlatform`, `clientVersion`, and after sign-in `customerId` or `staffId` (ids only)
 - when known: `siteId`, `country`
 - in a job: `jobId`, `jobName`, `attempt`
@@ -134,7 +135,7 @@ The Flutter app and the admin UI show `traceId` on every error (admin: in the er
 **What gets logged**
 
 - **One summary line per request** (Serilog request logging): method, route, status, `elapsedMs`. Level: Information below 500, except 403 and 429 at Warning (possible abuse); Error for 5xx. `/health/*` is not logged unless it fails.
-- **Business events** at Information with a fixed message template and named properties, for example `"Login code sent to customer {CustomerId}"`, `"Refresh token family {FamilyId} revoked: reuse detected"`. One line per meaningful state change, not per method call.
+- **Business events** at Information with a fixed message template and named properties, for example `"Login code sent to customer {customerId}"`, `"Refresh token family {familyId} revoked: reuse detected"`. **All log property names are lowerCamel**, placeholders included (S0-2 decision 3); the ECS task id is in the CloudWatch log stream name, not a property. One line per meaningful state change, not per method call.
 - **Every outside call** (SES in S0; SiteLink and Stripe from S1) logs one line: `integration`, `operation` (for SiteLink the WSDL operation name), `elapsedMs`, `outcome` (`ok` / `error` / `timeout` / `circuit-open`), `httpStatus`, `attempt`. Request and response bodies are never logged in production. Whether staging may log redacted SOAP bodies is decided in S1.
 - **Slow database commands:** an EF Core `DbCommandInterceptor` logs a Warning for any command over 500 ms (`Logging:SlowQueryMs`), with the command text and `elapsedMs`, never parameter values.
 - **Exceptions:** logged once, by the exception handler (§4.1), with the full stack, at Error. Code below it does not log-and-rethrow.
@@ -168,8 +169,8 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 
 - `GET /health/live`: the process is up.
 - `GET /health/ready`: the database is reachable.
-- The OpenAPI document is at `/openapi/v1.json` (built-in `Microsoft.AspNetCore.OpenApi`).
-- An interactive API page (Swagger UI pointed at `/openapi/v1.json`) is served **outside production only**.
+- The OpenAPI document is at `/openapi/v1.json` (built-in `Microsoft.AspNetCore.OpenApi`), **outside production only** (S0-2 decision 9; S0-5 generates types from a local or CI app).
+- An interactive API page (Swagger UI at `/swagger`, pointed at `/openapi/v1.json`) is served **outside production only**.
 
 ### 4.6 Money and time (`ExtraSpace.Engines`)
 
@@ -207,7 +208,7 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 | `staff_user` | `email` (unique, lower-case), `display_name`, `entra_object_id` (unique, set at first sign-in), `role_id`, `active`, `last_sign_in_at`, `created_by_staff_id`, `updated_by_staff_id` | staff must exist before they can sign in |
 | `role` | `name` (unique), `permissions text[]`, `is_system` | system roles cannot be deleted |
 | `audit_log` | `staff_user_id`, `action`, `entity_type`, `entity_id`, `changes jsonb`, `ip`, `occurred_at` | append-only; no update or delete endpoint |
-| `data_protection_keys` | (EF Core Data Protection table) | cookie keys shared by all instances |
+| `data_protection_keys` | (EF Core Data Protection table) | cookie keys shared by all instances; created by S0-2's first migration `InitialPlatform`. 🔴 Stored as plain XML: S0-4 must encrypt the key ring or revoke `es_readonly`'s read before cookies ship |
 | schema `hangfire` | (Hangfire tables) | created by Hangfire |
 
 ## 6. Identity

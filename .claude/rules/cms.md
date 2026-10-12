@@ -8,7 +8,7 @@ Always loaded. Applies to every file under `../CMS/`. Rewritten 2026-10-09 after
 - Architecture: **one monolith** (owner, 2026-10-09): mobile API, admin back office and background jobs in one deployable, hosted on AWS.
 - Written **from scratch**. The demo (`../Backend Demo/backend`) and the old Codigo system are read-only references, never integrated (`.claude/rules/backend-demo.md`, `.claude/rules/old-backend.md`).
 - Database: **PostgreSQL on AWS RDS, our own schema**, EF Core migrations owned by this repo.
-- Stack (recommended, confirm in the design spec): .NET 10 (installed locally: `dotnet 10.0.400`), EF Core + Npgsql (+ EFCore.NamingConventions snake_case), MVC controllers, Hangfire on PostgreSQL, Stripe.net, AWS SES v2, Serilog, .NET `TimeProvider`, xUnit v3 + AwesomeAssertions (not FluentAssertions 8+, commercial licence) + Testcontainers. No Redis in S0; ElastiCache Valkey is budgeted (cost v4) and S1 decides what it caches; no NodaTime. One image, three roles: `App:Role=api|jobs|all` (S0 spec §7). Admin UI: React + Vite + TypeScript (owner, 2026-10-09), built to static files in the API's `wwwroot` and served same-origin; Node is needed only on dev machines and CI, never in production. Layout (S0 spec §3): `src/ExtraSpace.Api` (`Platform/`, `Features/<Feature>/` with `Admin/` sub-folder, `Integrations/`), `src/ExtraSpace.Engines` (pure maths), `admin-ui/`, `infra/ExtraSpace.Infra` (CDK), `tests/ExtraSpace.Engines.Tests`, `tests/ExtraSpace.Api.Tests`, `tests/ExtraSpace.Infra.Tests` (CDK assertions). UI libs: React 19, Tailwind + shadcn/ui, TanStack Query/Table, React Hook Form + Zod, Recharts, `openapi-typescript` + `openapi-fetch`. Paths: OpenAPI `/openapi/v1.json` (Swagger UI outside production), health `/health/live` + `/health/ready`, Hangfire `/admin/jobs`. **TBD:** local port.
+- Stack (recommended, confirm in the design spec): .NET 10 (installed locally: `dotnet 10.0.400`), EF Core + Npgsql (+ EFCore.NamingConventions snake_case), MVC controllers, Hangfire on PostgreSQL, Stripe.net, AWS SES v2, Serilog, .NET `TimeProvider`, xUnit v3 + AwesomeAssertions (not FluentAssertions 8+, commercial licence) + Testcontainers. No Redis in S0; ElastiCache Valkey is budgeted (cost v4) and S1 decides what it caches; no NodaTime. One image, three roles: `App:Role=api|jobs|all` (S0 spec §7). Admin UI: React + Vite + TypeScript (owner, 2026-10-09), built to static files in the API's `wwwroot` and served same-origin; Node is needed only on dev machines and CI, never in production. Layout (S0 spec §3): `src/ExtraSpace.Api` (`Platform/`, `Features/<Feature>/` with `Admin/` sub-folder, `Integrations/`), `src/ExtraSpace.Engines` (pure maths), `admin-ui/`, `infra/ExtraSpace.Infra` (CDK), `tests/ExtraSpace.Engines.Tests`, `tests/ExtraSpace.Api.Tests`, `tests/ExtraSpace.Infra.Tests` (CDK assertions). UI libs: React 19, Tailwind + shadcn/ui, TanStack Query/Table, React Hook Form + Zod, Recharts, `openapi-typescript` + `openapi-fetch`. Paths: OpenAPI `/openapi/v1.json` (Swagger UI outside production), health `/health/live` + `/health/ready`, Hangfire `/admin/jobs`. Local port: API `http://localhost:5080`, PostgreSQL `localhost:5433`, Seq `http://localhost:5341`.
 
 ## House rules (design defaults; only the owner changes them)
 
@@ -40,6 +40,30 @@ Always loaded. Applies to every file under `../CMS/`. Rewritten 2026-10-09 after
 - CDK (`infra/ExtraSpace.Infra`): `EnvConfig` (sizes per environment) → `InfraComposer.Compose(app, account)` → stacks `EsNetwork-<env>`, `EsData-<env>`. The availability zones are fixed and overridden on the stack, so there are no context lookups and no `cdk.context.json`; keep it that way, the test `Compose_needs_no_context_lookup` guards it.
 - CDK CLI: `~/.local/share/node-v24.18.0/bin/cdk` (put it on PATH). Always `--profile extraspace` (the account comes from it). Never `--all`; always name the stacks. `cdk synth` offline: unset `AWS_PROFILE` and set `AWS_CONFIG_FILE=/dev/null AWS_SHARED_CREDENTIALS_FILE=/dev/null CDK_DEFAULT_ACCOUNT=123456789012`.
 
+## Built so far (S0-2, branch `s0-2-api-platform`, 2026-10-12)
+
+- `src/ExtraSpace.Api/Platform/`: `Data` (AppDbContext, TimestampsInterceptor, SlowQueryInterceptor, migrations), `Errors` (AppException, ErrorCodes, AppExceptionHandler, ProblemDetailsSetup, ProblemWriter), `Health`, `Hosting` (AppOptions, PlatformServices), `Http` (AppVersion, security headers, rate-limit 429), `Logging` (LoggingSetup, Pii, RequestLog, enrichers, request summary), `Tracing` (RequestTrace, Correlation, ActivitySetup). Pipeline order = spec §4.2, in `Program.cs`.
+- Feature code registers from `Program.cs` or its own folder, never from `PlatformServices`; it reads its tables with `db.Set<T>()` (no feature `DbSet` on `AppDbContext`).
+- Errors: throw `AppException(status, code, title)`; never `return BadRequest(obj)` (the body must stay a problem). Middleware writes errors with `ProblemWriter.WriteAsync`.
+- Logging: `RequestLog.Add(HttpContext, "customerId", id)` (void) puts a property on every later line of the request and its summary line. `Correlation.Begin(id)` for job runs (S0-3). Never name an id property with `token`, `secret`, `password`, `logincode`, `authorization`, `cookie` or `connectionstring` in it (it is masked to `***`): use `familyId`, `codeId`. Only `{@object}` values are inspected by the masker; never log objects with `{obj}` / `{$obj}`. EF's own failure events are logged at Debug; our exception handler logs every 5xx once.
+- Enum wire values are PascalCase names (`"Active"`), the same text EF stores; store enums with `.HasConversion<string>()` per property (no global convention).
+- JSON settings live in TWO option sets: MVC (`AddControllers().AddJsonOptions`) for real responses and `ConfigureHttpJsonOptions` for the OpenAPI document. Add any converter to both, or the docs and the wire disagree. An OpenAPI schema transformer gives enum schemas `type: string` and drops `null` from the shared enum component (nullable uses wrap it in `oneOf`); `ApiDocsTests` guards every enum in the document.
+- `ExecuteUpdate`/`ExecuteDelete` skip `TimestampsInterceptor`: set `updated_at` yourself.
+- A client sending `Accept: text/html` gets an empty error body (status + `X-Trace-Id` only); our clients send JSON.
+- After `dotnet ef migrations add`, strip the BOM EF writes (all three files) so diffs stay clean (`.editorconfig` charset utf-8).
+- Architecture test (`tests/ExtraSpace.Api.Tests/Architecture/`) uses a recursive Mono.Cecil walk (NetArchTest missed async lambdas); its known blind spots are listed in `ArchitectureRules.cs`.
+- Tests: `dotnet test tests/ExtraSpace.Api.Tests` needs Docker (OrbStack); one PostgreSQL 18.6 Testcontainer per run (`ApiFactory`, xUnit assembly fixture); test-only endpoints live in `TestSupport/TestController.cs` under `/test/*`.
+
 ## Running locally
 
-**TBD** at phase 1: build command, run command, port, OpenAPI URL, health URL, required env (user-secrets or a local `.env`, never committed). Add every local port to `.claude/dev-ports` so the Stop hook can reap orphaned apps.
+From `../CMS`:
+
+```bash
+docker compose up -d     # PostgreSQL 18.6 on 127.0.0.1:5433 (no password, loopback only), Seq on http://localhost:5341
+dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5433;Database=extraspace;Username=postgres" --project src/ExtraSpace.Api
+dotnet tool restore
+dotnet ef database update --project src/ExtraSpace.Api --connection "Host=localhost;Port=5433;Database=extraspace;Username=postgres"   # migrate BEFORE the first run
+dotnet run --project src/ExtraSpace.Api      # http://localhost:5080
+```
+
+Health `/health/live`, `/health/ready`; OpenAPI `/openapi/v1.json`; Swagger UI `/swagger` (both outside production). In Seq, find a request with `@TraceId = '<id>'` (Seq keeps the trace id as its built-in field, not as `traceId`). Shared environments: migration scripts go to `docs/migrations/` via `dotnet ef migrations script --idempotent`; strip the BOM before running them with `psql`. Kill the app after testing (port 5080 is in `.claude/dev-ports`).
