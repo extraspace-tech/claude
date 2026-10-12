@@ -57,15 +57,15 @@ CMS/
 
 House rules for the layout:
 
-- **One feature = one folder.** It holds the feature's controllers, services, EF entity configuration and jobs.
+- **One feature = one folder.** It holds the feature's endpoints, services, EF entity configuration and jobs.
 - **A feature never touches another feature's tables.** It calls that feature's service. Example: Bookings asks the Credits wallet service to spend credits.
-- **Each feature has a public face: `Features/<Feature>/Contracts/`** (its service interfaces and the DTOs they take and return). Another feature may use only that folder. Entities, EF configurations, controllers and service classes stay inside the feature.
-- **An architecture test enforces this** (`tests/ExtraSpace.Api.Tests/Architecture/`; library picked in the plan, ArchUnitNET or NetArchTest). It fails the build when:
+- **Each feature has a public face: `Features/<Feature>/Contracts/`** (its service interfaces and the DTOs they take and return). Another feature may use only that folder. Entities, EF configurations, endpoint classes and service classes stay inside the feature.
+- **An architecture test enforces this** (`tests/ExtraSpace.Api.Tests/Architecture/`; built in S0-2 on a recursive Mono.Cecil walk, because NetArchTest missed dependencies inside async lambdas). It fails the build when:
   - code in feature X uses any type of feature Y outside `Y.Contracts` (this also catches `db.Set<YEntity>()`, because it needs Y's entity type)
   - `Platform/` or `Integrations/` depends on `Features/`
-  - a controller injects the `DbContext` (controllers call a service)
+  - an endpoint class (name ends with `Endpoints`, or it maps routes) uses the `DbContext` or EF Core (endpoints call a service)
   - `ExtraSpace.Engines` references EF Core, ASP.NET Core or `System.Net.Http`
-- **Endpoints are MVC `[ApiController]` controllers.** Controllers stay thin and call a service. Mobile controllers route under `api/v1/...`; admin controllers live in `Features/<Feature>/Admin/` and route under `admin/api/...`.
+- **Endpoints are Minimal APIs** (owner, 2026-10-12, S0-2b; replaces MVC controllers). Each feature has `Features/<Feature>/<Feature>Endpoints.cs`: a static class with `Map<Feature>Endpoints(this RouteGroupBuilder group)`. Handlers stay thin, call a service and return `TypedResults`. `Program.cs` creates the route groups once: `/api/v1` (customer JWT) and `/admin/api` (admin cookie, CSRF, audit filter); admin endpoints live in `Features/<Feature>/Admin/`.
 - **One `DbContext`.** Each feature registers only its own entity configurations (`IEntityTypeConfiguration<T>` classes in its folder).
 - **No repository layer.** Services use the `DbContext` directly.
 
@@ -81,7 +81,7 @@ House rules for the layout:
   "code": "INVALID_CODE", "traceId": "4bf92f3577b34da6a3ce929d0e0e4736" }
 ```
 
-- Validation errors: status 400, `code = "VALIDATION_FAILED"`, plus `errors: { "<field>": ["message"] }`. These come from `[ApiController]` model validation, mapped to our shape by one `InvalidModelStateResponseFactory`.
+- Validation errors: status 400, `code = "VALIDATION_FAILED"`, plus `errors: { "<field>": ["message"] }`. These come from .NET 10 Minimal API validation (`AddValidation()`, DataAnnotations), which writes through `IProblemDetailsService`; `ProblemDetailsSetup.Customize` sets the code. A body that is not valid JSON is a `BadHttpRequestException` (`ThrowOnBadRequest = true` in every environment) and also becomes 400 `VALIDATION_FAILED`, without `errors` (clients must treat `errors` as optional). Every error body is this JSON problem whatever the request's `Accept` header.
 - Business errors are thrown as one `AppException(status, code, title)` and mapped by one exception handler (`IExceptionHandler`). Unknown exceptions become 500 `INTERNAL_ERROR` without internal details; the details go to the log.
 - Statuses without their own code: a bare 400 → `VALIDATION_FAILED`, 401/403/404/409/426/429/5xx → the codes below, anything else → `HTTP_<status>` (S0-2 decision 7). An EF concurrency failure and a PostgreSQL unique violation become `409 CONFLICT`.
 - S0 codes: `VALIDATION_FAILED`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, `APP_UPDATE_REQUIRED`, `INVALID_CODE`, `TOO_MANY_ATTEMPTS`, `INTERNAL_ERROR`. Each later feature adds its own codes in its own spec.
@@ -103,7 +103,7 @@ In order:
 11. App version check (before sign-in, so an outdated app gets 426, not a 401 refresh loop)
 12. Authentication
 13. Authorization
-14. Controllers
+14. Feature endpoints (route groups `/api/v1`, `/admin/api`)
 15. SPA fallback `/admin/{*path}` → `wwwroot/admin/index.html`
 
 ### 4.3 App version check
@@ -249,9 +249,9 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 
 - Permissions are string constants in code, owned by each feature (S0: `staff.manage`, `roles.manage`, `audit.read`, `jobs.manage`).
 - Roles hold a list of permissions. `Owner` (system role) always has every permission.
-- Checked per action: `[Authorize(Policy = "staff.manage")]`. One policy is generated per permission constant.
+- Checked per endpoint: `.RequireAuthorization("staff.manage")`. One policy is generated per permission constant.
 - `GET /admin/api/me` returns the staff member and their effective permissions; the UI hides what they lack. The server still checks every call.
-- **Audit:** one MVC action filter writes an `audit_log` row for every successful admin `POST/PUT/PATCH/DELETE`: who, action, entity type and id, and the changed fields (before → after, secrets excluded).
+- **Audit:** one endpoint filter (`IEndpointFilter` on the `/admin/api` group) writes an `audit_log` row for every successful admin `POST/PUT/PATCH/DELETE`: who, action, entity type and id, and the changed fields (before → after, secrets excluded).
 - S0 admin endpoints:
   - `GET/POST/PATCH /admin/api/staff` (`staff.manage`): add a staff member by email, change role, deactivate. Nobody can deactivate themselves or remove the last Owner.
   - `GET/POST/PATCH/DELETE /admin/api/roles` (`roles.manage`): system roles cannot be deleted.

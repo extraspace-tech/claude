@@ -11,4 +11,4 @@ The user handles **commits and pushes themselves**. **NEVER run `git commit` or 
 
 **Why:** the user reviews and tests before committing and owns the git history. They use GitHub Desktop.
 
-**How to apply:** instruct every subagent to build-verify only, never commit. Deliver the commit message as text: conventional commits (`feat(scope): subject`, `fix:`), then **3-4 terse bullets max**, one per user-visible change, no rationale. No `Co-Authored-By` trailer when the user commits. Related: [[feedback-comment-style]].
+**How to apply:** instruct every subagent to build-verify only, never commit. Deliver the commit message as text: conventional commits (`feat(scope): subject`, `fix:`), then **3-4 terse bullets max**, one per user-visible change, no rationale. No `Co-Authored-By` trailer when the user commits. When the user asks for a "GitHub message": give the commit message AND a PR title + body, main points as bullets; they push a branch and merge through a PR themselves (S0-2 went in as PR #1). Related: [[feedback-comment-style]].

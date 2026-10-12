@@ -17,6 +17,18 @@ Always loaded. Every item below was a real defect in the Porsche workspace, foun
 - The CDK app must never do context lookups (`Vpc.FromLookup`, AZ lookups, `HostedZone.FromLookup`). A lookup calls AWS at synth time and writes the account id into `cdk.context.json`, which must never reach the public repo. Pass known values in.
 - A CDK test that fails because CDK renders a value differently (a token instead of a literal, inline vs separate rules) means: read the synthesized JSON and fix the construct. Never loosen a Review Focus assertion.
 
+## 1c. ASP.NET Core pipeline and logging (found in S0-2 reviews, 2026-10-12)
+
+- `UseExceptionHandler` clears the endpoint and unwinds every `LogContext.PushProperty` scope before your handler runs. Anything the error line or the request summary needs (route, `customerId`) must live in `HttpContext.Items` and be read by an enricher, not pushed in a `using`.
+- EF Core logs its own failure events at Error (`Database.Command` CommandError, `Update` SaveChangesFailed, `Query` QueryIterationFailed, ConnectionError, TransactionError). Next to our exception handler that is two Error lines per failure, and a 409 race shows up as an error. Keep them at Debug through `ConfigureWarnings`, not by silencing a whole category.
+- ASP.NET Core's hosting scope adds `RequestPath` (raw, unclipped), `RequestId`, `ActionId`, `ActionName` to every line through `Enrich.FromLogContext()`. The spec allows only the route template, so they are removed.
+- A log masker must walk `StructureValue`, `SequenceValue` AND `DictionaryValue`; `{@headers}` is a dictionary.
+- `Microsoft.AspNetCore.OpenApi` builds schemas from `Microsoft.AspNetCore.Http.Json.JsonOptions`, not MVC's JSON options. A converter added to only one makes the document disagree with the wire. (Moot since S0-2b dropped MVC; it returns if anyone adds `AddControllers`.)
+- .NET 10 Minimal API validation keys `errors` by the C# member path (`Email`) and only covers types in the project that calls `AddValidation()` (S0-2b). Our `Customize` camelCases the keys; a test-only DTO needs `AddValidation()` in the test host.
+- The framework's `DefaultProblemDetailsWriter` refuses a non-JSON `Accept` and then `CustomizeProblemDetails` never runs: the client gets a problem without `code`/`traceId`. We register `JsonProblemWriter` first. Minimal API route/query enum binding (`Enum.TryParse`) accepts any number; use `.WithEnumGuard()` on the group.
+- A test-host app that starts before its migration runs logs startup errors (Data Protection key ring). Migrate with a standalone context first.
+- An architecture rule built on NetArchTest 1.3.2 misses dependencies inside async lambdas (nested two levels deep). A type filter `!Name.Contains('<')` also drops C# `file` types. Prove every rule with a fixture that must fail.
+
 ## 2. EF Core and transactions
 
 - Every `BeginTransactionAsync` needs a `CommitAsync` on every success path. A missing commit rolls back silently at dispose: green build, no exception.

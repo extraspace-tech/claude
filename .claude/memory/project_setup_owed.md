@@ -1,23 +1,19 @@
 ---
 name: project-setup-owed
-description: ⭐ RESUME — S0-1 done + pushed; S0-2 merged to main (PR #1); NEXT = S0-3 plan; plus open owner/IT items.
+description: ⭐ RESUME — S0-1 done + pushed; S0-2 merged (PR #1); S0-2b Minimal APIs done, awaiting owner push; NEXT = S0-3 plan; plus open owner/IT items.
 metadata:
   type: project
 ---
 
 Open after the 2026-10-09 setup (copied from Porsche-AI). Tick off and delete lines as they close.
 
-**RESUME (2026-10-12):**
-- **S0 spec APPROVED** 2026-10-12. Plans: `docs/superpowers/plans/2026-10-12-s0-plan-index.md` (6 plans S0-1…S0-6). Only S0-1 is written so far.
-- **S0-1** (`docs/superpowers/plans/2026-10-12-s0-1-network-database.md`), branch `s0-1-network-database` in `../CMS`, NOTHING committed:
-  - Tasks 1–3 (skeleton, CDK app, network + data stacks): done by an implementer, verdict **ACCEPT**. Build 0 errors / 0 warnings; tests 32/32. The 5 deviations are in the plan's "Implementation notes".
-  - Task 4 (`cdk diff` staging, read-only): done.
-  - Task 5: **staging deployed 2026-10-12** (PM approved the ≈ US$128/mo; the owner ran `cdk deploy` in their own terminal because Claude Code blocks `--require-approval never`). Cost is running from 2026-10-12.
-  - Task 6: DB users `es_app` / `es_readonly` + schema `hangfire` created on staging, TLS forced (checked). RDS needs `GRANT es_app TO postgres` … `REVOKE` around `CREATE SCHEMA … AUTHORIZATION es_app` (guide B5).
-  - S0-1 committed and pushed by the owner to `main` (`84b8475`, 2026-10-12; owner approved pushing while the repo is PUBLIC).
-- **S0-2 IMPLEMENTED 2026-10-12** on branch `s0-2-api-platform` in `../CMS`, NOT committed (owner commits): build 0/0, 130 tests (Api 80, Engines 18, Infra 32), local run checked (health, 404 problem + X-Trace-Id, OpenAPI, Swagger, Seq). Migration script `docs/migrations/2026-10-12-initial-platform.sql` (not yet run on staging; S0-6 runs it before the first deploy). The nullable-enum OpenAPI residual was fixed the same day (130 tests). Carry-overs for S0-3…S1: plan index. **Merged to `main` via PR #1 (`9b0f86b`). NEXT: write the S0-3 plan.**
-  - Production stacks are written and tested but not deployed (deploy before go-live). Before the first production deploy, verify the RDS Proxy target-group tags (CloudFormation schema allows them; checked 2026-10-12).
-- **After S0-1:** write the S0-2 plan (API platform). S0-6 infra can run in parallel.
+**RESUME (2026-10-12, end of day):**
+- **S0 spec APPROVED** 2026-10-12. Plans: `docs/superpowers/plans/2026-10-12-s0-plan-index.md` (S0-1…S0-6) with a "Carry-overs from S0-2" section that S0-3…S1 must read first.
+- **S0-1 DONE** (plan `2026-10-12-s0-1-network-database.md`): skeleton + CDK network/database; **staging network + database LIVE** in the client account since 2026-10-12 (≈ US$128/mo running); DB users `es_app` / `es_readonly` + schema `hangfire` created (guide B5). On `main` (`84b8475`). Production stacks written and tested, not deployed.
+- **S0-2 DONE** (plan `2026-10-12-s0-2-api-platform.md`): API platform, 130 tests (Api 80, Engines 18, Infra 32). Merged to `main` via **PR #1** (`9b0f86b`). Local run verified (Swagger at `/swagger` is nearly empty until S0-3 adds endpoints). Migration script `docs/migrations/2026-10-12-initial-platform.sql` NOT yet run on staging (S0-6 runs it before the first deploy).
+- **S0-2b DONE (uncommitted, owner pushes)** 2026-10-12: owner switched endpoints from MVC to **Minimal APIs** to learn them. Branch `s0-2b-minimal-apis` in `../CMS`, 134 tests (Api 84). Adds `AddValidation()`, one JSON option set, `IEndpointMapper` (test host only), `JsonProblemWriter` (JSON problem for any Accept), `.WithEnumGuard()`, enums reject numbers, `EndpointDataAccess` architecture rule. Learning guide for the owner: `docs/notes/cms/minimal-apis-vs-mvc.md` (extend it per new concept).
+- **NEXT: write the S0-3 plan** (after S0-2b is merged; read the S0-2b carry-overs: groups `.WithEnumGuard()`, `Program.cs` maps groups only) (customer sign-in: email code, JWT + refresh rotation, `/api/v1/me`, rate limits, Hangfire + job tracing, SES login-code email, IdentityHousekeeping). Then S0-4 (needs Entra registration for live sign-in), S0-5, S0-6 (CI/CD on GitHub Actions + staging app deploy).
+- How S0-2 ran (repeat it): subagent-driven development, Opus implementer per task + Opus code-reviewer per task + scoped re-reviews + one final whole-branch review; agents never commit, so per-task diffs come from snapshot trees ([[feedback-sdd-without-commits]]).
 - **AWS account facts and rules:** [[reference-aws-account]]. Never the `default` profile (Porsche); always `--profile extraspace --region ap-southeast-1`.
 - Cost estimate **v4**: $1,019/month, budget ≈ $1,170 ([[reference-aws-cost-estimate]]). SG + MY at release. One client account holds staging and production (Vercel staging dropped).
 - Client artifacts: `docs/notes/client-artifacts/` ([[reference-client-artifacts]]). S1–S3 specs read the demo spec, the client-artifact notes and the old-backend notes; conflicts go to the PM (cross-repo §4, open decision 8).
