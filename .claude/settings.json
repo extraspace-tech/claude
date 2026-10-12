@@ -13,6 +13,9 @@
     ]
   },
   "model": "fable",
+  "env": {
+    "AWS_SHARED_CREDENTIALS_FILE": "/dev/null"
+  },
   "enableAllProjectMcpServers": true,
   "hooks": {
     "PreToolUse": [

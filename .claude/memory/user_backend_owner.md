@@ -13,3 +13,4 @@ The user is the sole backend developer for the new Extra Space monolith. They ar
 - Use `[ApiController]` controllers in feature folders.
 - Keep the project count small.
 - When there is a choice, prefer the well-known ASP.NET Core pattern, and explain new concepts briefly in plain English. See [[feedback-plain-english]].
+- **First time setting up AWS** (said 2026-10-10). On 2026-10-12 they asked Claude to do the AWS setup for them. So run the AWS steps yourself through the `extraspace` profile; explain each in plain words; show the command and the monthly cost and wait for an explicit OK before anything that creates, changes or deletes. See [[reference-aws-account]].

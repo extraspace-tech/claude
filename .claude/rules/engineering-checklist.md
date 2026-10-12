@@ -11,6 +11,12 @@ Always loaded. Every item below was a real defect in the Porsche workspace, foun
 - Extract business rules from a prototype's **code**, not its rendered page. A rendered read of the client's ES App artifact got 4 rules wrong (2026-10-09).
 - Before you say the demo or the old system does or lacks something: read the spec doc AND the cited TS file (demo), or `docs/notes/old-backend/` AND the cited C# file (old system). The spec is a snapshot of 2026-10-08.
 
+## 1b. AWS and CDK
+
+- 🔴 Every AWS CLI or CDK command names the profile (`--profile extraspace`). The laptop's `default` profile is another client's account. Claude sessions here cannot see it (`AWS_SHARED_CREDENTIALS_FILE=/dev/null`), but a subagent must not work around that. Real incident, 2026-10-12: a `cdk synth` without a profile reached the Porsche account.
+- The CDK app must never do context lookups (`Vpc.FromLookup`, AZ lookups, `HostedZone.FromLookup`). A lookup calls AWS at synth time and writes the account id into `cdk.context.json`, which must never reach the public repo. Pass known values in.
+- A CDK test that fails because CDK renders a value differently (a token instead of a literal, inline vs separate rules) means: read the synthesized JSON and fix the construct. Never loosen a Review Focus assertion.
+
 ## 2. EF Core and transactions
 
 - Every `BeginTransactionAsync` needs a `CommitAsync` on every success path. A missing commit rolls back silently at dispose: green build, no exception.

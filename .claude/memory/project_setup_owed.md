@@ -1,28 +1,30 @@
 ---
 name: project-setup-owed
-description: ⭐ RESUME — things the 2026-10-09 workspace copy could not finish or verify: first start check (hooks, additionalDirectories, memory folder name), MCP install, C# solution facts (TBD lines), reviewer prompt rewrite, decisions the owner must make.
+description: ⭐ RESUME — S0-1 DONE 2026-10-12 (staging network + DB live, ≈ US$128/mo running; DB users created); code on branch s0-1-network-database uncommitted; NEXT = owner commits S0-1, then the S0-2 plan; plus open owner/IT items.
 metadata:
   type: project
 ---
 
 Open after the 2026-10-09 setup (copied from Porsche-AI). Tick off and delete lines as they close.
 
-**RESUME (2026-10-09 evening):**
-- The brainstorm finished for S0. The spec is `docs/superpowers/specs/2026-10-09-s0-foundation-design.md` (316 lines).
-- 2026-10-10: logging and tracing added to the spec (§4.4, plus §4.2, §7, §9.2, §10, §11 item 8) at the owner's request.
-- It is WAITING for owner review. The next step after approval is the `superpowers:writing-plans` skill: the S0 implementation plan, split into parallel implementer pieces with their own file sets.
-- All decisions are in `.claude/rules/cross-repo.md` §4.
-- AWS cost estimate is at **v4** (2026-10-10, PM budget US$1,000–1,500): $1,019/month, budget ≈ $1,170. Page version 4. S0 spec §7/§9.2 now follow it (api/jobs roles, RDS Proxy to verify). See [[reference-aws-cost-estimate]].
-- The PM confirmed **SG + MY at release** (it replaced "Singapore only").
-- The client's own Claude artifacts were extracted to `docs/notes/client-artifacts/`. See [[reference-client-artifacts]].
-- Next sub-project specs (S1–S3) must read three references: the demo spec, the client-artifact notes and the old-backend notes. Where they disagree, ask the PM (cross-repo §4, open decision 8).
-- Saved 2026-10-09 wrap-up: redacted artifact sources in `docs/notes/client-artifacts/source/`, cost page source in `docs/notes/aws-cost/`.
+**RESUME (2026-10-12):**
+- **S0 spec APPROVED** 2026-10-12. Plans: `docs/superpowers/plans/2026-10-12-s0-plan-index.md` (6 plans S0-1…S0-6). Only S0-1 is written so far.
+- **S0-1** (`docs/superpowers/plans/2026-10-12-s0-1-network-database.md`), branch `s0-1-network-database` in `../CMS`, NOTHING committed:
+  - Tasks 1–3 (skeleton, CDK app, network + data stacks): done by an implementer, verdict **ACCEPT**. Build 0 errors / 0 warnings; tests 32/32. The 5 deviations are in the plan's "Implementation notes".
+  - Task 4 (`cdk diff` staging, read-only): done.
+  - Task 5: **staging deployed 2026-10-12** (PM approved the ≈ US$128/mo; the owner ran `cdk deploy` in their own terminal because Claude Code blocks `--require-approval never`). Cost is running from 2026-10-12.
+  - Task 6: DB users `es_app` / `es_readonly` + schema `hangfire` created on staging, TLS forced (checked). RDS needs `GRANT es_app TO postgres` … `REVOKE` around `CREATE SCHEMA … AUTHORIZATION es_app` (guide B5).
+  - **NEXT: the owner commits S0-1 in `../CMS` and pushes the branch (owner approved pushing while the repo is still PUBLIC, 2026-10-12, so the PM can see progress; still never an account id, endpoint or secret in the repo), then write the S0-2 plan.**
+  - Production stacks are written and tested but not deployed (deploy before go-live). Before the first production deploy, verify the RDS Proxy target-group tags (CloudFormation schema allows them; checked 2026-10-12).
+- **After S0-1:** write the S0-2 plan (API platform). S0-6 infra can run in parallel.
+- **AWS account facts and rules:** [[reference-aws-account]]. Never the `default` profile (Porsche); always `--profile extraspace --region ap-southeast-1`.
+- Cost estimate **v4**: $1,019/month, budget ≈ $1,170 ([[reference-aws-cost-estimate]]). SG + MY at release. One client account holds staging and production (Vercel staging dropped).
+- Client artifacts: `docs/notes/client-artifacts/` ([[reference-client-artifacts]]). S1–S3 specs read the demo spec, the client-artifact notes and the old-backend notes; conflicts go to the PM (cross-repo §4, open decision 8).
 - Not checked: client-artifact rules vs the live Flutter app (repo not in the workspace). Do it before the S1 spec.
-- Nothing is committed; the context repo has uncommitted changes.
+- The context repo has many uncommitted changes. The owner commits.
 
 **Open owner / client-IT items (spec §12):**
 - make `extraspace-tech/cms` private (PUBLIC today)
-- AWS account(s) and who owns them
 - Entra ID app registration; confirm M365
 - SES sender + SPF/DKIM
 - host name
