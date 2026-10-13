@@ -18,7 +18,7 @@ Rules for every S0 plan (from the workspace rules):
 - Code goes to `../CMS`. Implementers are Opus `implementer` subagents; the main session reviews the real diff and gives a verdict per piece.
 - **Nobody commits or pushes.** Each task ends with "hand-off": the owner commits. Work happens on a branch per plan (`s0-1-network-database`, …).
 - 🔴 `extraspace-tech/cms` is public: no secret, connection string, account id or customer data in any file. Do not push until the repo is private (open item 5), or confirm with the owner.
-- AWS changes in the client account `110611798568` run only from the main session, only after the owner's OK, and never touch the client's existing Lambdas and buckets. Production data rules from `.claude/CLAUDE.md` §6 apply.
+- AWS changes in the client account `110611798568` run only from the main session or the `devops` subagent (staging only, with the owner's OK quoted in its brief; production changes are handed to the owner), only after the owner's OK, and never touch the client's existing Lambdas and buckets. Production data rules from `.claude/CLAUDE.md` §6 apply.
 
 ## Carry-overs from S0-2 (final review, 2026-10-12)
 
