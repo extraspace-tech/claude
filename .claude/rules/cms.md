@@ -58,6 +58,43 @@ Always loaded. Applies to every file under `../CMS/`. Rewritten 2026-10-09 after
 - Architecture test (`tests/ExtraSpace.Api.Tests/Architecture/`) uses a recursive Mono.Cecil walk (NetArchTest missed async lambdas); its known blind spots are listed in `ArchitectureRules.cs`.
 - Tests: `dotnet test tests/ExtraSpace.Api.Tests` needs Docker (OrbStack); one PostgreSQL 18.6 Testcontainer per run (`ApiFactory`, xUnit assembly fixture); test-only endpoints live in `TestSupport/TestEndpoints.cs` under `/test/*` (added through `IEndpointMapper`; the test host also calls `AddValidation()` because the validation generator only sees types in its own project).
 
+## Built so far (S0-3, branch `s0-3-customer-identity`, 2026-10-13)
+
+- **`Platform/Jobs`** (Hangfire on PostgreSQL, schema `hangfire`):
+  - Enqueue with `IBackgroundJobClient`. Every role can enqueue; only roles `Jobs` and `All` run the server and register recurring jobs.
+  - A recurring job is a class that implements `IRecurringJob`, declared with `services.AddRecurringJob<TJob>(name, cron)`. It runs in time zone `Asia/Singapore` and has a `Jobs:<name>:Enabled` switch.
+  - Job classes can be `internal sealed`. Only the method must be public.
+  - `JobTracingFilter` gives every run its own Activity and the log properties `jobId`, `jobName` (the class name without its `Job` suffix; "unknown" when Hangfire cannot load the type), `attempt` and `correlationId` (the traceId of the request that enqueued the job). It logs `Job {jobName} started / succeeded / failed / failed permanently`.
+  - **Every `[AutomaticRetry]` sets `LogEvents = false`.** Our filter already logs each attempt.
+- **`Integrations/Email`:**
+  - `IEmailSender.Enqueue(new EmailMessage(template, to, values, validFor))`. Call it **after** the DB commit. It renders the template at once, so a missing value fails the request.
+  - The address and the values are encrypted with a time-limited Data Protection protector. The job argument `expiresAt` is in clear: an expired email logs a Warning and is not retried, while an unreadable payload fails and raises the alarm.
+  - `EmailJob`: 5 attempts with delays 10/20/40/80/160 s. At-least-once delivery.
+  - Transports (`Email:Transport`):
+    - `Ses` (default; needs `Email:From`; no SDK retries, 10 s timeout; an SES error is rethrown with only its code and status, because sandbox messages name the recipient);
+    - `Log` (Development only; prints the whole email, code included);
+    - `None` (Testing only; the test host supplies `FakeEmailTransport`).
+  - Templates are embedded under `Integrations/Email/Templates/`. Today there is one: `login-code` (`code`, `minutes`).
+- **`Features/Identity`:**
+  - Tables `customer`, `customer_login_code` (one row per email) and `customer_refresh_token`.
+  - Services: `LoginCodeService` (per-email advisory lock `login-code:<email>`), `TokenService` (per-family advisory lock `refresh-family:<id>`; every writer of a family takes it first), `AccessTokens` and `CustomerService`.
+  - Recurring job `IdentityHousekeeping`: daily at 03:00 SGT.
+  - All types are internal **except request DTOs, which must be `public`**, because the .NET 10 validation generator skips internal types.
+- **The `/api/v1` group** (`Program.cs` step 14): `app.MapGroup("/api/v1").RequireCustomer().WithEnumGuard()`.
+  - `RequireCustomer()` = `RequireAuthorization("Customer")`, plus an endpoint filter that adds `customerId` to the request log.
+  - Public routes opt out with `.AllowAnonymous()`: the whole `/auth` sub-group, logout included.
+  - JWT scheme `Customer`: HS256 only, `MapInboundClaims = false`, 30 s skew. `CustomerAuth:SigningKey` must be base64 of at least 32 bytes. It is checked at start-up in every role.
+  - `AppException { RetryAfter = … }` → the `Retry-After` header, through `RateLimitSetup.RetryAfterSeconds`.
+  - Per-IP policies `auth-code` (20 per hour) and `auth-verify` (30 per hour) are in memory, counted per task.
+- **Tests:**
+  - `api.ClientWithIp()` gives each test its own X-Forwarded-For address, so one test's per-IP limits never hit another.
+  - `AuthFlow` (`RequestCodeAsync`, `VerifyAsync`, `api.SignInAsync(client, email)`).
+  - `api.Emails` (`FakeEmailTransport`: `SentTo`, `WaitForAsync`, `CodeForAsync`).
+  - `LogCapture.All()` / `WaitForAsync`.
+  - `IdentityTestData` (test-only signing key, `NewEmail`, `CreateCustomerAsync`, `AccessTokenFor`, `ForgedToken`).
+  - 🔴 Every `WithWebHostBuilder` host sets `App:Role=Api`: Hangfire's filters and storage are static and shared by every host in the process.
+  - Log checks match a unique property. `Pii.MaskEmail` maps every `x-…@example.test` address to the same value.
+
 ## Running locally
 
 From `../CMS`:
@@ -65,9 +102,10 @@ From `../CMS`:
 ```bash
 docker compose up -d     # PostgreSQL 18.6 on 127.0.0.1:5433 (no password, loopback only), Seq on http://localhost:5341
 dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5433;Database=extraspace;Username=postgres" --project src/ExtraSpace.Api
+dotnet user-secrets set "CustomerAuth:SigningKey" "$(openssl rand -base64 48)" --project src/ExtraSpace.Api   # S0-3: the app refuses to start without it
 dotnet tool restore
 dotnet ef database update --project src/ExtraSpace.Api --connection "Host=localhost;Port=5433;Database=extraspace;Username=postgres"   # migrate BEFORE the first run
 dotnet run --project src/ExtraSpace.Api      # http://localhost:5080
 ```
 
-Health `/health/live`, `/health/ready`; OpenAPI `/openapi/v1.json`; Swagger UI `/swagger` (both outside production). In Seq, find a request with `@TraceId = '<id>'` (Seq keeps the trace id as its built-in field, not as `traceId`). Shared environments: migration scripts go to `docs/migrations/` via `dotnet ef migrations script --idempotent`; strip the BOM before running them with `psql`. Kill the app after testing (port 5080 is in `.claude/dev-ports`).
+Development sends email through the `Log` transport: the sign-in code is printed in the console (`Development email`). Health `/health/live`, `/health/ready`; OpenAPI `/openapi/v1.json`; Swagger UI `/swagger` (both outside production). In Seq, find a request with `@TraceId = '<id>'` (Seq keeps the trace id as its built-in field, not as `traceId`). Shared environments: migration scripts go to `docs/migrations/` via `dotnet ef migrations script --idempotent`; strip the BOM before running them with `psql`. Kill the app after testing (port 5080 is in `.claude/dev-ports`).

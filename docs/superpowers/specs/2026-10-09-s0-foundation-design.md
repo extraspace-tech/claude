@@ -139,7 +139,7 @@ The Flutter app and the admin UI show `traceId` on every error (admin: in the er
 - **Every outside call** (SES in S0; SiteLink and Stripe from S1) logs one line: `integration`, `operation` (for SiteLink the WSDL operation name), `elapsedMs`, `outcome` (`ok` / `error` / `timeout` / `circuit-open`), `httpStatus`, `attempt`. Request and response bodies are never logged in production. Whether staging may log redacted SOAP bodies is decided in S1.
 - **Slow database commands:** an EF Core `DbCommandInterceptor` logs a Warning for any command over 500 ms (`Logging:SlowQueryMs`), with the command text and `elapsedMs`, never parameter values.
 - **Exceptions:** logged once, by the exception handler (§4.1), with the full stack, at Error. Code below it does not log-and-rethrow.
-- **Jobs:** start, success (`elapsedMs`) and failure (Error, with `attempt`); a job that exhausts its retries logs `"Job {JobName} failed permanently"`, which an alarm watches.
+- **Jobs:** start, success (`elapsedMs`) and failure (Error, with `attempt`); a job that exhausts its retries logs `"Job {jobName} failed permanently"` (lowerCamel, as built in S0-3), which an alarm watches.
 
 **Levels in production:** Default Information; `Microsoft.AspNetCore` and `Microsoft.EntityFrameworkCore` Warning; `System.Net.Http` Warning; Debug off. Levels can be changed per namespace through config (`Serilog:MinimumLevel:Override:*`) with a task restart; no code change.
 
@@ -149,7 +149,7 @@ The Flutter app and the admin UI show `traceId` on every error (admin: in the er
 - Hot or repeated log lines use the `[LoggerMessage]` source generator.
 - Never log an entity, a DTO or a request object whole. Log ids.
 - 🔴 Never log: tokens, login codes, cookies, `Authorization` headers, passwords, Stripe secrets, connection strings, full request or response bodies, card data. Personal data: ids only; an email address only through `Pii.MaskEmail` (`j***@gmail.com`), and only where a support case needs it (the login flow).
-- A Serilog destructuring policy masks any property named like `*token*`, `*secret*`, `*password*`, `loginCode`, `authorization` or `cookie`, as a second line of defence. Login-code fields are named `loginCode` everywhere for this reason.
+- A Serilog destructuring policy masks any property named like `*token*`, `*secret*`, `*password*`, `loginCode`, `authorization` or `cookie`, as a second line of defence. The login code's wire name stays `code` (§6.1), so the masker does not cover it: its safety rests on never logging request bodies, plus the S0-3 test `A_full_sign_in_flow_logs_no_code_token_or_raw_email`.
 
 **Local development:** console output in a readable text format, and the same JSON sent to a local **Seq** container (`docker-compose.yml`, `http://localhost:5341`, free for one developer) to search by `traceId` or any property. Seq is never used outside Development.
 
@@ -203,7 +203,7 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 | Table | Columns (besides `id`, `created_at`, `updated_at`) | Notes |
 |---|---|---|
 | `customer` | `email` (unique; stored trimmed and lower-case), `first_name`, `last_name`, `phone` | S1 adds the SiteLink tenant links in its own table |
-| `customer_login_code` | `email`, `code_hash`, `expires_at`, `attempts`, `consumed_at`, `request_ip` | one active code per email; a new request replaces the old one |
+| `customer_login_code` | `email` (unique), `code_hash`, `expires_at`, `attempts`, `consumed_at`, `request_ip`, `last_sent_at`, `window_started_at`, `sent_in_window` | one row per email; a new request overwrites the code fields. The last three columns (S0-3) make the per-email limits exact |
 | `customer_refresh_token` | `customer_id`, `family_id`, `token_hash` (unique), `expires_at`, `replaced_by_id`, `revoked_at`, `user_agent`, `ip` | rotation and theft detection (§6.1) |
 | `staff_user` | `email` (unique, lower-case), `display_name`, `entra_object_id` (unique, set at first sign-in), `role_id`, `active`, `last_sign_in_at`, `created_by_staff_id`, `updated_by_staff_id` | staff must exist before they can sign in |
 | `role` | `name` (unique), `permissions text[]`, `is_system` | system roles cannot be deleted |
@@ -226,6 +226,20 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 - **Access token:** JWT, HS256, 15 minutes. Claims: `sub` (customer id), `email`, `iss`, `aud`. The signing key comes from Secrets Manager.
 - **Refresh token:** 32 random bytes (base64url), stored as a SHA-256 hash. It lasts 60 days from issue, and each refresh starts a new 60 days.
 - Customer routes use the `Customer` auth scheme (JWT bearer). Public routes (S1 browsing) are `[AllowAnonymous]` and rate-limited per IP. There is **no app API key**, because a key inside an app binary can be extracted.
+
+**As built in S0-3** (plan `docs/superpowers/plans/2026-10-13-s0-3-customer-identity.md`, its 16 decisions confirmed by the owner on 2026-10-13):
+
+- The `/api/v1` group requires the `Customer` policy. `/auth/*` opts out with `.AllowAnonymous()`. Logout is anonymous too: the refresh token in the body is the credential, and an app whose access token has expired must still be able to sign out.
+- Email addresses are trimmed and lower-cased before any use. The request check is strict: no display name, no whitespace, a dot in the domain.
+- Each code request and each check takes a per-email PostgreSQL advisory lock (`login-code:<email>`), so a double tap runs one call after the other. The per-email limits are exact. "5 per hour" is a fixed window that starts at the first send in the window.
+- A per-email 429 carries `Retry-After`: the longer of the 60 s gap and the time left in the hourly window. The per-IP limits (20 code requests, 30 checks per hour) use the in-memory rate limiter. They are counted per API task, and their `Retry-After` is the whole window.
+- Wrong attempts 1-4 → `400 INVALID_CODE`. The 5th wrong attempt, and every check after it, → `400 TOO_MANY_ATTEMPTS`. The attempt is committed before the error is returned.
+- Code hash: HMAC-SHA256 of `email:code`, keyed with an HKDF sub-key (`login-code`) of `CustomerAuth:SigningKey`. Refresh-token hash: SHA-256, hex.
+- The email job is queued after the commit. If queuing fails, the request returns 500 and the code row stays saved. The customer can ask again after 60 s. S1's outbox can remove this gap.
+- Token response: `{ accessToken, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt }`, with times in UTC (`Z`). `accessTokenExpiresAt` equals the JWT `exp`.
+- JWT validation: HS256 only, issuer `extraspace`, audience `extraspace-app`, 30 s clock skew, `MapInboundClaims = false`. `CustomerAuth:SigningKey` must be base64 of at least 32 bytes. It is checked at start-up in **every** role, so the `jobs` service needs the secret too.
+- Refresh and logout take a per-family advisory lock (`refresh-family:<id>`) before any row lock. A revoke therefore also catches a token that a parallel refresh is inserting. Two parallel refreshes with the same token count as reuse, and both are signed out.
+- `/me` for a customer id that no longer exists → `401 UNAUTHENTICATED`.
 
 ### 6.2 Staff sign-in (admin)
 

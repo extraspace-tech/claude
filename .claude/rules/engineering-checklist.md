@@ -29,7 +29,17 @@ Always loaded. Every item below was a real defect in the Porsche workspace, foun
 - A test-host app that starts before its migration runs logs startup errors (Data Protection key ring). Migrate with a standalone context first.
 - An architecture rule built on NetArchTest 1.3.2 misses dependencies inside async lambdas (nested two levels deep). A type filter `!Name.Contains('<')` also drops C# `file` types. Prove every rule with a fixture that must fail.
 
-## 2. EF Core and transactions
+## 1d. Found in S0-3 reviews (2026-10-13)
+
+- A READ COMMITTED `UPDATE … WHERE family_id = X` that waits on a locked row re-checks only the rows in its own snapshot. It misses a row that another transaction is inserting right now. To revoke "everything in a group", serialise every writer of the group with one advisory lock (`refresh-family:<id>`), and take it before any row lock.
+- Namespace every advisory-lock key (`login-code:<email>`, `refresh-family:<id>`): all features share one 64-bit key space.
+- `catch (CryptographicException)` around `Unprotect` turns a key-ring fault into "expired" and hides an outage. Decide expiry from a clear timestamp, and let crypto failures throw.
+- Job retries must finish inside the lifetime of what the job sends. Hangfire's default back-off for 5 attempts spans 7-14 minutes, which is longer than a 10-minute code.
+- The .NET 10 validation generator skips `internal` request DTOs: the handler runs unvalidated. Request bodies are `public`.
+- Hangfire's `GlobalJobFilters` and `JobStorage.Current` are static and shared by every test host in the process. A `WithWebHostBuilder` host sets `App:Role=Api`.
+- A test of "only HS256" must use an algorithm the library would otherwise accept. HS512 with a 49-byte key is refused by the key-size rule alone, so it tests nothing.
+- A read that feeds an update and races a background delete needs `FOR UPDATE`. Without it, `SaveChanges` updates 0 rows and the request gets 409.
+
 
 - Every `BeginTransactionAsync` needs a `CommitAsync` on every success path. A missing commit rolls back silently at dispose: green build, no exception.
 - Never `Update()` a row you added with `AddAsync` in the same unit of work (Added → Modified fails the save).

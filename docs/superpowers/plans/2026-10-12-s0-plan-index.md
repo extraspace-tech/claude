@@ -7,7 +7,7 @@ The S0 spec (`docs/superpowers/specs/2026-10-09-s0-foundation-design.md`, approv
 | **S0-1** Repo skeleton + AWS network and database | Solution layout, build settings, CDK app with `EsNetwork-<env>` and `EsData-<env>` stacks (VPC, NAT, RDS PostgreSQL 18, bastion, DB secrets, RDS Proxy in production), infra tests. **Staging network + database deployed**, DB users created. | — | — | **done** 2026-10-12 (staging network + DB live): `2026-10-12-s0-1-network-database.md` |
 | S0-2 API platform | `ExtraSpace.Api` host, error format, pipeline, logging and tracing (§4.4), app-version check, health, OpenAPI, `ExtraSpace.Engines` (Money), `AppDbContext` + conventions + interceptors, architecture test, `docker-compose.yml` (PostgreSQL + Seq), test harness (WebApplicationFactory + Testcontainers) | S0-1 (skeleton files only) | S0-6 infra part | **done** 2026-10-12, merged to `main` (PR #1): `2026-10-12-s0-2-api-platform.md` (also creates `data_protection_keys`) |
 | S0-2b Minimal APIs | Replace MVC controllers with Minimal APIs: `AddValidation()`, one JSON option set, `IEndpointMapper` hook, `TestEndpoints`, endpoint architecture rule (owner, 2026-10-12) | S0-2 | — | **done** 2026-10-12, branch `s0-2b-minimal-apis` (uncommitted until the owner pushes); 134 tests; one implementer + code review + 2 fix rounds. Also: `JsonProblemWriter` (JSON problem for any Accept), `WithEnumGuard()`, enums reject numbers |
-| S0-3 Customer identity + jobs + email | `customer*` tables, code flow, JWT + refresh rotation, `/me`, rate limits, Hangfire with roles and job tracing, SES sender + `login-code` template, `IdentityHousekeeping` | S0-2b | S0-4, S0-5 | after S0-2b |
+| S0-3 Customer identity + jobs + email | `customer*` tables, code flow, JWT + refresh rotation, `/me`, rate limits, Hangfire with roles and job tracing, SES sender + `login-code` template, `IdentityHousekeeping` | S0-2b | S0-4, S0-5 | **done** 2026-10-13, branch `s0-3-customer-identity` (uncommitted until the owner pushes): `2026-10-13-s0-3-customer-identity.md` (16 decisions confirmed by the owner). Subagent-driven: 5 tasks, each one reviewed, plus a whole-branch review and one fix wave |
 | S0-4 Admin back end | Entra SSO, cookie (🔴 first: encrypt the Data Protection key ring at rest — KMS/Secrets Manager XML encryptor — or `REVOKE SELECT ON data_protection_keys FROM es_readonly`; S0-2 stores keys in plain XML), CSRF, RBAC, audit filter, staff / roles / audit / permissions endpoints, Hangfire dashboard auth, `xmin` 409 | S0-2 | S0-3, S0-5 | after S0-2 |
 | S0-5 Admin UI shell | React 19 + Vite app, layout, Staff / Roles / Audit screens, generated API types | S0-4 contract (OpenAPI) | S0-3 | after S0-4's contract is fixed |
 | S0-6 Delivery | Dockerfile, ECR, `EsEdge-<env>` (Route 53, ACM, SES domain), `EsApp-<env>` (ALB, WAF, ECS api/jobs, log groups, saved queries, alarms), `EsCi` (GitHub OIDC roles), GitHub workflows, secret scan; staging deploy and the §11 walk | S0-1; the app parts need S0-2…S0-5 | S0-2…S0-5 for the infra code | after S0-1 |
@@ -24,7 +24,7 @@ Rules for every S0 plan (from the workspace rules):
 - **S0-3:**
   - (S0-2b) Create the groups in `Program.cs` step 14 as `app.MapGroup("/api/v1").WithEnumGuard()…` (and `/admin/api` in S0-4); `Program.cs` maps groups only, never handlers (the architecture rule cannot see the top-level `Program`). Feature routes in `Features/<X>/<X>Endpoints.cs`. Tell the Flutter team: `errors` is present only for field validation.
   - Job runs need their own Activity: `ActivitySetup` listens only to `Microsoft.AspNetCore`, so the Hangfire server filter starts `new Activity("job").Start()` (or adds its source to the listener) and calls `Correlation.Begin(...)`. Otherwise job lines have no `traceId`.
-  - A 429 or `TOO_MANY_ATTEMPTS` that needs `Retry-After` is written with `ProblemWriter`. `AppException` carries no headers, and the exception handler clears the headers it does not own.
+  - ~~A 429 that needs `Retry-After` is written with `ProblemWriter`~~ Superseded by S0-3 decision 10: `AppException.RetryAfter`, written by `AppExceptionHandler` through `RateLimitSetup.RetryAfterSeconds`.
   - Per-IP rate-limit partitions need a fallback key: `RemoteIpAddress` is null under TestServer.
   - Owed test: an outdated app gets 426, not 401, on a signed-in route.
   - Name ids `familyId` and `codeId`, never `refreshTokenId` or `loginCodeId`: those names are masked.
@@ -49,6 +49,34 @@ Rules for every S0 plan (from the workspace rules):
   - Watch ECS task-stopped events for startup crashes: they come before Serilog starts.
   - Staging serves `/swagger` and `/openapi/v1.json` publicly (decision 9). Confirm with the owner.
   - The slow-query interceptor ignores failed commands (`CommandFailed`).
+## Carry-overs from S0-3 (reviews, 2026-10-13)
+
+- **S0-4:**
+  - The key-ring item (🔴 above) now also protects the login-code email jobs. `hangfire.job` holds the address and code encrypted with Data Protection, so anyone who can read `data_protection_keys` can read a job payload while it is still valid (10 minutes).
+  - Adding the admin cookie scheme removes the automatic default scheme. That is fine for `/api/v1`, because the `Customer` policy names its scheme. The OpenAPI Bearer transformer matches only `Policy == "Customer"`.
+  - Every `WithWebHostBuilder` test host sets `App:Role=Api`, so it does not start a second Hangfire server. Hangfire's `GlobalJobFilters` and `JobStorage.Current` are static and shared by every host in the process. A host that leaves the Testing environment also sets `Email:Transport=Ses` and `Email:From`.
+  - Request DTOs must be `public`: the .NET 10 validation generator skips `internal` types.
+  - Every `[AutomaticRetry]` sets `LogEvents = false`. Every writer of a refresh-token family takes the `refresh-family:<id>` advisory lock first.
+- **S0-5:** declare the problem responses (400/401/429) on the `/api/v1/auth/*` routes, or add a group-level convention, so that generated clients get the error types. Today the OpenAPI document lists only 202/200/204.
+- **S0-6:**
+  - Inject `CustomerAuth:SigningKey` (`es/<env>/…`) and `Email:From` into **both** the `api` and `jobs` services. Both roles validate them at start-up.
+  - Use a container image that has tzdata/ICU. `RecurringJobs` resolves `Asia/Singapore` in a static initializer, so a chiseled image without tzdata stops the jobs role at start-up.
+  - The ALB keeps `routing.http.xff_header_processing.mode=append`, and the tasks accept traffic only from the ALB. The per-IP limits use the last X-Forwarded-For hop. Pin the XFF mode with a CDK assertion. IPv6 clients are limited per /128.
+  - First deploy to an empty `data_protection_keys`: start one task first, or create the key ring once, then scale. Otherwise the `api` tasks and the `jobs` task may each create their own first key, and email jobs fail until the key ring reloads.
+  - Walk check: the first `Email` job line in role `jobs` has `correlationId` equal to the request's `traceId`. The tests cover only role `All`.
+  - A WAF rate rule for `/api/v1/auth/*`. `/auth/refresh` and `/auth/logout` have no per-IP limit in the app; the token's 256 bits make guessing pointless, so this guards only against floods.
+  - The SES identity must be verified before the first deploy. Each SES error logs Error lines, and after 5 attempts `Job Email failed permanently`; the alarm watches that line.
+- **Flutter (contract notes):**
+  - `POST /auth/code` → 202 with no body, whether or not the email is known.
+  - `/auth/code/verify` → 200 `TokenResponse`, or 400 `INVALID_CODE` / `TOO_MANY_ATTEMPTS` / `VALIDATION_FAILED`, or 429.
+  - A 429 always has `Retry-After` in seconds. On the per-IP limit it can be the whole hour.
+  - Send refresh calls one at a time: a parallel double refresh signs the session out.
+  - Logout always returns 204.
+  - An access token stays valid for up to 15 minutes after logout.
 - **S1:**
+  - Add `customerId` to the summary line when binding fails. Today the endpoint filter sets it only once the handler stage is reached. Test it with the first signed-in POST.
+  - Outbox for the login-code email (a queuing failure after commit gives a 500 today).
+  - Per-IP limits in Valkey, if the per-task count proves too loose.
+  - Optionally, move the per-email limit from a fixed window to a rolling one.
   - Make `default(Money)` safe and use the invariant culture in `Money.ToString` once Money reaches EF or a DTO.
   - Use `.HasConversion<string>()` for every enum property.

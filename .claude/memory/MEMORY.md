@@ -1,6 +1,6 @@
 # Memory Index
 
-- [Setup owed (RESUME)](project_setup_owed.md) — ⭐ RESUME HERE: S0-1 done + pushed (staging network + DB live, ≈ $128/mo); S0-2 merged (PR #1); S0-2b Minimal APIs done, owner to push → S0-3 plan next; open owner/IT items.
+- [Setup owed (RESUME)](project_setup_owed.md) — ⭐ RESUME HERE: S0-1 done + pushed (staging network + DB live, ≈ $128/mo); S0-2 merged (PR #1); S0-2b on main; S0-3 done on branch s0-3-customer-identity (uncommitted) → next S0-4 plan; open owner/IT items.
 - [AWS account](reference_aws_account.md) — ⭐ client account 110611798568 (staging + prod), profile `extraspace` via `aws login`; NEVER the `default` profile (Porsche 747103386453); client Lambdas/buckets untouched; bootstrap, budget, SES inboxes, staging network + DB done.
 - [System landscape](project_system_landscape.md) — ⭐ brand-new C# monolith in CMS/ = functional copy of the Node demo (read-only reference); old Codigo system + Lucy untouched/retired; all owner decisions of 2026-10-09.
 - [AWS cost estimate](reference_aws_cost_estimate.md) — v4 (PM budget $1,000–1,500): $1,019/mo, budget ≈ $1,170, ≈ $906 with DB RI; m8g.large + Proxy, api/jobs split, Valkey, 2 NAT, WAF; client page URL, unit prices.
