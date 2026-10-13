@@ -171,6 +171,7 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 - `GET /health/ready`: the database is reachable.
 - The OpenAPI document is at `/openapi/v1.json` (built-in `Microsoft.AspNetCore.OpenApi`), **outside production only** (S0-2 decision 9; S0-5 generates types from a local or CI app).
 - An interactive API page (Swagger UI at `/swagger`, pointed at `/openapi/v1.json`) is served **outside production only**.
+- **As built in S0-5:** every operation documents a `default` error response with one `Problem` schema (§4.1); a `[Required]` member is documented non-null; integers are strict JSON numbers (`JsonNumberHandling.Strict`: a number sent as a string is 400 `VALIDATION_FAILED`, also on `/api/v1`).
 
 ### 4.6 Money and time (`ExtraSpace.Engines`)
 
@@ -305,6 +306,8 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 - `GET /audit`: newest first, `page`/`pageSize` (1–100, default 50), `from`/`to` must carry an offset or `Z`.
 - Dashboard `/admin/jobs` behind `jobs.manage` (401/403 JSON); its POSTs need the antiforgery token.
 
+**Added in S0-5:** `GET /admin/api/me` also returns `isOwner`. A role name that is taken answers 409 `ROLE_NAME_TAKEN` on create and rename (a stale `version` stays 409 `CONFLICT`).
+
 ## 7. Background jobs and email
 
 - **Job tracing:** a Hangfire client filter stores the current `correlationId` as a job parameter when a job is enqueued; a server filter starts a new `Activity` for the run and pushes `correlationId`, `jobId`, `jobName` and `attempt` into the log context (§4.4).
@@ -339,6 +342,15 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 - Menus and buttons are hidden by permission.
 - Build: `npm run build` outputs to `src/ExtraSpace.Api/wwwroot/admin/` (git-ignored; the Docker build produces it).
 - Dev: the Vite dev server forwards `/admin/api` and `/admin/jobs` to the local API.
+
+**As built in S0-5** (plan `docs/superpowers/plans/2026-10-13-s0-5-admin-ui-shell.md`, 17 decisions approved by the owner on 2026-10-13):
+
+- Serving: static files + a GET/HEAD fallback `/admin/{*path:nonfile}`; `/admin/api/*`, `/admin/jobs/*`, a missing asset and an unbuilt UI are 404 problems. A Content-Security-Policy (`script-src 'self'`) on every admin page and asset, not on the Hangfire dashboard. Hashed assets are cached for a year; `index.html` is `no-cache`.
+- API types: `admin-ui/openapi.json` is committed and an xUnit test fails when it differs from the app; `npm run gen:api` generates `src/api/schema.d.ts` from it (no running API needed). TypeScript is pinned to 6.0.3 until the generator supports 7.
+- Sign-in screen: two steps (email, code) at the current address; no `/login` route. A 401 on any call shows it again and sign-in returns to the same page. A failed sign-out keeps the shell.
+- Screens: dashboard (empty), Staff (list, add, edit, deactivate / reactivate), Roles (list, create, rename, permissions, delete; more than the list above asked for), Audit (staff, record type, time range; 50 per page), a Jobs link with `jobs.manage`. Light / dark / system theme.
+- Edits send only the changed fields plus `version`; on 409 `CONFLICT` the list reloads and the dialog stays open.
+- Tests: Vitest + React Testing Library + MSW (96 tests); Playwright still starts in S1. No ESLint yet; strict `tsc` is the gate.
 
 ## 9. AWS, CI/CD and environments
 

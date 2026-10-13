@@ -80,6 +80,6 @@ BEGIN
     INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
     VALUES ('20261013114525_DropEntraObjectId', '10.0.11');
     END IF;
-END $EF$;
+END $EF$; 
 COMMIT;
 

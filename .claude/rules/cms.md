@@ -50,4 +50,15 @@ dotnet ef database update --project src/ExtraSpace.Api --connection "Host=localh
 dotnet run --project src/ExtraSpace.Api      # http://localhost:5080
 ```
 
-Development sends email through the `Log` transport: the sign-in code is printed in the console (`Development email`). Health `/health/live`, `/health/ready`; OpenAPI `/openapi/v1.json`; Swagger UI `/swagger` (both outside production). In Seq, find a request with `@TraceId = '<id>'` (Seq keeps the trace id as its built-in field, not as `traceId`). Shared environments: migration scripts go to `docs/migrations/` via `dotnet ef migrations script --idempotent`; strip the BOM before running them with `psql`. Kill the app after testing (port 5080 is in `.claude/dev-ports`).
+Development sends email through the `Log` transport: the sign-in code is printed in the console (`Development email`). Health `/health/live`, `/health/ready`; OpenAPI `/openapi/v1.json`; Swagger UI `/swagger` (both outside production). In Seq, find a request with `@TraceId = '<id>'` (Seq keeps the trace id as its built-in field, not as `traceId`). Shared environments: migration scripts go to `docs/migrations/` via `dotnet ef migrations script --idempotent`; strip the BOM before running them with `psql`. Kill the app after testing (ports 5080 and 5173 are in `.claude/dev-ports`).
+
+Admin UI (S0-5), from `../CMS/admin-ui` with Node 24 on PATH (`~/.local/share/node-v24.18.0/bin`):
+
+```bash
+npm ci
+npm run dev      # http://localhost:5173/admin/ , forwards /admin/api and /admin/jobs to the API on 5080
+npm run build    # writes src/ExtraSpace.Api/wwwroot/admin (git-ignored); then the API serves http://localhost:5080/admin
+npm run typecheck && npm test
+```
+
+After a change to an admin or mobile endpoint or DTO: `UPDATE_OPENAPI=1 dotnet test tests/ExtraSpace.Api.Tests -- --filter-class "*OpenApiSnapshotTests"`, then `npm run gen:api`, and review both diffs. 🔴 TypeScript stays 6.0.3 (the type generator crashes on 7).
