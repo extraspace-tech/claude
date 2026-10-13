@@ -1,0 +1,11 @@
+{
+  "host": "staging.app.example.test",
+  "zoneName": "app.example.test",
+  "zoneId": "Z0000000EXAMPLE",
+  "emailFrom": "ExtraSpace <no-reply@staging.app.example.test>",
+  "alarmEmail": "alarms@example.test",
+  "adminEmailDomains": ["example.test"],
+  "bootstrapEmails": ["qa@example.test"],
+  "emailAllowedRecipients": ["qa@example.test"],
+  "corsOrigins": []
+}

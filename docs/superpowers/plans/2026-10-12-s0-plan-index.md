@@ -11,7 +11,7 @@ The S0 spec (`docs/superpowers/specs/2026-10-09-s0-foundation-design.md`, approv
 | S0-4 Admin back end | Entra SSO, cookie (🔴 first: encrypt the Data Protection key ring at rest — KMS/Secrets Manager XML encryptor — or `REVOKE SELECT ON data_protection_keys FROM es_readonly`; S0-2 stores keys in plain XML), CSRF, RBAC, audit filter, staff / roles / audit / permissions endpoints, Hangfire dashboard auth, `xmin` 409 | S0-2 | S0-3, S0-5 | **done** 2026-10-13, on `main` (`6a8a16e`); its Entra sign-in is replaced by S0-4b: `2026-10-13-s0-4-admin-backend.md` (17 decisions; key ring → SSM). Subagent-driven: 5 tasks, each reviewed, plus a whole-branch review; local walk 14/14 PASS; Api 278, Engines 18, Infra 32 tests |
 | S0-4b Staff email code | Replaces Entra (PM, 2026-10-13): staff sign in with an emailed one-time code; one code engine with a purpose (`login_code`); dev-login removed; `Admin:AllowedEmailDomains`; `displayName` | S0-4 | — | **done** 2026-10-13, on `main` (`583118a`): `2026-10-13-s0-4b-staff-email-code.md`. 2 tasks + review + fix wave; local walk 12/12 PASS; Api 288 tests |
 | S0-5 Admin UI shell | React 19 + Vite app, layout, Staff / Roles / Audit screens, generated API types | S0-4 contract (OpenAPI) | S0-3 | **built** 2026-10-13 on branch `s0-5-admin-ui-shell` (uncommitted until the owner pushes): `2026-10-13-s0-5-admin-ui-shell.md` (17 decisions approved). Subagent-driven: 6 tasks, each reviewed, plus a whole-branch review and one fix wave; local walk 20/20 PASS (API level; the browser walk is the owner's); Api 332 tests, admin UI 96 tests. Toolchain: `docs/notes/cms/s0-5-toolchain-spike.md` (TypeScript pinned to 6.0.3) |
-| S0-6 Delivery | Dockerfile, ECR, `EsEdge-<env>` (Route 53, ACM, SES domain), `EsApp-<env>` (ALB, WAF, ECS api/jobs, log groups, saved queries, alarms), `EsCi` (GitHub OIDC roles), GitHub workflows, secret scan; staging deploy and the §11 walk | S0-1; the app parts need S0-2…S0-5 | S0-2…S0-5 for the infra code | after S0-1 |
+| S0-6 Delivery | Dockerfile, ECR, `EsEdge-<env>` (Route 53, ACM, SES domain), `EsApp-<env>` (ALB, WAF, ECS api/jobs, log groups, saved queries, alarms), `EsCi` (GitHub OIDC roles), GitHub workflows, secret scan; staging deploy and the §11 walk | S0-1; the app parts need S0-2…S0-5 | S0-2…S0-5 for the infra code | **Tasks 1–8 built** 2026-10-13 on branch `s0-6-delivery` (cut from `s0-5-admin-ui-shell` `2097fe3`; uncommitted until the owner commits): `2026-10-13-s0-6-delivery.md`. Subagent-driven: 7 tasks, each reviewed, plus a whole-branch review and one fix wave; Engines 18, Infra 238, Api 353 tests; three new stacks synthesize offline. **Task 9 (deploy `EsCi`, GitHub settings, staging go-live, the §11 walk) not started**: it needs the owner's OK per step, and from `EsEdge` on the delegated subdomain |
 
 Rules for every S0 plan (from the workspace rules):
 
@@ -122,3 +122,17 @@ Every "S0-5" bullet above is done, except two that S0-4b made obsolete ("navigat
   - Every new audited table adds a line to the audit screen's record types; every new admin page adds its menu item with a permission.
   - A new `[Required]` nested request DTO or nullable enum is covered by `RequiredNotNullOpenApi`; re-check its tests after any `Microsoft.AspNetCore.OpenApi` upgrade.
   - `admin-ui/src/main.tsx` must import `@/lib/zod-config` first (no test guards it); a lazy route chunk needs the same. Cheapest guard: both dialogs import `z` from one wrapper that sets the config.
+## Carry-overs from S0-6 (reviews, 2026-10-13)
+
+Full list with reasons: the plan's "Implementation notes".
+
+- **Task 9 (staging go-live):** service-linked roles for ECS / load balancing before the first `EsApp` create; confirm `es_app` can read `__EFMigrationsHistory`; `APP_HOST` is an environment **secret**; confirm the SNS subscription email; test each metric filter with a real line and run each saved query once; the failure drill (a build ahead of the database) must show the old version still serving, the job red and the tag unchanged.
+- **Before production:**
+  - 🔴 A container health check on both services: today a `jobs` task that crashes at start is not rolled back (only `api` is, through the load balancer).
+  - A separate production ECR repository (the staging role can push `prod-*` tags to the shared one).
+  - RDS Proxy connection pinning check; the first-deploy key-ring race; `VerifyFull` to RDS; SES production access.
+  - The CDK warning F3002 (tags on the proxy target group) in `EsData-production`, from S0-1.
+  - A prerequisites checklist before the first `EsApp-production` create (retained secret and log groups block a retry).
+- **S1:** scope the firewall's 8 KB body rule before any webhook or upload route; a Hangfire heartbeat or queue-age alarm; a stop timeout with the first long job; access logs once S3 exists.
+- **Flutter (contract note):** a 429 without `X-Trace-Id` comes from the firewall (`code = RATE_LIMITED`, `Retry-After: 300`, no CORS headers): retry later, never treat it as signed out. The firewall's sign-in limit (100 per 5 minutes per IP) also covers `/auth/refresh`.
+- **Owner questions:** a DMARC report mailbox; private repo and GitHub plan (asked of the PM 2026-10-13); whether to move staging migrations into the workflow later (option B).
