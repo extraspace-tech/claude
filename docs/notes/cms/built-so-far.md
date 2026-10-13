@@ -45,7 +45,7 @@ Moved here from `.claude/rules/cms.md` on 2026-10-13 so it no longer loads on ev
     - `None` (Testing only; the test host supplies `FakeEmailTransport`).
   - Templates are embedded under `Integrations/Email/Templates/`. Today there is one: `login-code` (`code`, `minutes`).
 - **`Features/Identity`:**
-  - Tables `customer`, `customer_login_code` (one row per email) and `customer_refresh_token`.
+  - Tables `customer`, `login_code` (S0-4b: one row per purpose + email; was `customer_login_code`) and `customer_refresh_token`.
   - Services: `LoginCodeService` (per-email advisory lock `login-code:<email>`), `TokenService` (per-family advisory lock `refresh-family:<id>`; every writer of a family takes it first), `AccessTokens` and `CustomerService`.
   - Recurring job `IdentityHousekeeping`: daily at 03:00 SGT.
   - All types are internal **except request DTOs, which must be `public`**, because the .NET 10 validation generator skips internal types.
@@ -74,10 +74,18 @@ Moved here from `.claude/rules/cms.md` on 2026-10-13 so it no longer loads on ev
   - Permissions: a feature registers `services.AddPermissions(new Permission(name, description))` (`Features/Admin/Contracts`) and guards routes with `.RequireAuthorization("<name>")`. One policy per name; Owner holds every name; stored names that left the catalogue are ignored.
   - The cookie holds only the staff id. `StaffAccess` reloads staff + role on every request (deactivation or role change applies at the next request). Read the loaded session with `HttpContext.StaffSession()`. `StaffAccess` also adds `staffId` to the request log, so every line of a staff request has it (403s and `/admin/jobs` included).
   - Cookies: `__Host-es-admin` / `__Host-es-csrf` (Secure always); in **Development** `es-admin` / `es-csrf` with SameAsRequest, so plain http works locally.
-  - Sign-in: Entra OIDC (built-in handler, code + PKCE, callback `/admin/api/auth/callback`, no front-channel sign-out). Missing Entra settings: Production refuses to start in roles `Api`/`All` (role `Jobs` needs no Entra secret), other environments answer 503 `ADMIN_SIGNIN_UNAVAILABLE` on `/auth/login`. Development-only `POST /admin/api/auth/dev-login {email}`: loopback only, and refused when any forwarded header is present.
+  - Sign-in (S0-4b, replaces Entra and dev-login): `POST /admin/api/auth/code {email}` (always 202; mail only to an active staff member or an eligible bootstrap address) and `POST /admin/api/auth/code/verify {email, code}` (204 + cookie). `StaffSignIn` wraps Identity's `ILoginCodes` with `LoginCodePurpose.Staff`. `Admin:AllowedEmailDomains` limits staff addresses. Locally the code is printed in the console.
 - **Audit:** mark an entity `IAudited` (needs a `Guid Id`) and, if admin-edited, `IHasStaffStamps`; `[NotAudited]` keeps a property out. `AuditInterceptor` writes one `audit_log` row per changed entity in the same SaveChanges (`changes = { camelName: { from, to } }`, enums as names). 🔴 Admin writes go through tracked entities: `ExecuteUpdate`/`ExecuteDelete` skip the audit.
 - **Concurrency:** admin-edited entities have `uint Version` with `.IsRowVersion()` (`xmin`); responses carry `version`; PATCH bodies and `DELETE ?version=` must send it; stale → 409. PostgreSQL unique AND foreign-key violations → 409 `CONFLICT`, logged once at Warning with the constraint name.
 - **Owner rules:** every write that can change who is an active Owner takes `pg_advisory_xact_lock(hashtextextended('staff-owners', 0))` and re-checks the actor under it. Only an active Owner grants or changes the Owner role; at least one active Owner always remains.
 - **Minimal API gotchas:** a group's `""` route keeps a trailing slash in its template (use `MapGroup("")` + full paths); a handler with only `HttpContext` returning `Task<T>` binds the `RequestDelegate` overload and its result is discarded (cast to `(Delegate)`, ASP0016); EF cannot order after projecting into a positional record (order first).
 - **Hangfire dashboard:** `/admin/jobs` via `MapHangfireDashboardWithAuthorizationPolicy("jobs.manage", …)`; 401/403 JSON, POSTs need the antiforgery token (Hangfire reads our `IAntiforgery`). Each successful dashboard write logs `Jobs dashboard action {path} by staff {staffId}`; dashboard actions are not audited. The framework's own OpenIdConnect log category is set to `Fatal` (our redacted Warning records sign-in failures).
 - **Tests:** `api.AdminClient()` (https base address: `__Host-` cookies are Secure), `SignedInAdminAsync`, `StaffClientAsync(perms)`, `client.AddCsrfAsync()`, test route `POST /test/admin/sign-in/{staffId}`. 🔴 Only `[Collection("Owners")]` tests create or change Owners, and they call `ClearOwnersAsync()` first.
+
+## Built so far (S0-4b, branch `s0-4b-staff-email-code`, 2026-10-13)
+
+- **One code engine with a purpose:** `Features/Identity/Contracts/ILoginCodes` (`SendAsync`, `VerifyAsync<T>(…, onVerified, …)`) and `LoginCodePurpose { Customer, Staff }`. Another feature that needs emailed codes injects `ILoginCodes`; it never reads `login_code`.
+- `VerifyAsync` opens the transaction: a wrong code is counted and committed before the error; on a match the code is consumed and `onVerified` runs in the same transaction (join `db.Database.CurrentTransaction`, never commit it). If `onVerified` throws, the code stays usable.
+- The purpose is in the unique key `(purpose, email)`, the advisory lock `login-code:<purpose>:<email>` and the hash input. Send limits are per purpose.
+- 🔴 EF scaffolds a **drop + create** for a renamed table: write the rename by hand (`StaffEmailCode` migration) and never `migrations remove` a hand-written one.
+- No Entra, no OpenIdConnect package, no dev-login. Production needs no sign-in settings.

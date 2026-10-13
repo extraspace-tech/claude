@@ -1,6 +1,6 @@
 # Memory Index
 
-- [Setup owed (RESUME)](project_setup_owed.md) — ⭐ RESUME HERE: S0-1 done + pushed (staging network + DB live, ≈ $128/mo); S0-2 merged (PR #1); S0-2b on main; S0-3 on main (9c678ce); S0-4 built on branch s0-4-admin-backend (uncommitted, 278 tests, walk PASS) → next S0-5 plan; open owner/IT items.
+- [Setup owed (RESUME)](project_setup_owed.md) — ⭐ RESUME HERE: S0-1 done + pushed (staging network + DB live, ≈ $128/mo); S0-2 merged (PR #1); S0-2b on main; S0-3 on main (9c678ce); S0-4 built on branch s0-4-admin-backend (uncommitted, 278 tests, walk PASS) ; PM 2026-10-13: self-storage only, no Entra, Stripe Connect; S0-4b (staff email code) built on branch s0-4b-staff-email-code, uncommitted → next S0-5 plan; open owner/IT items.
 - [AWS account](reference_aws_account.md) — ⭐ client account 110611798568 (staging + prod), profile `extraspace` via `aws login`; NEVER the `default` profile (Porsche 747103386453); client Lambdas/buckets untouched; bootstrap, budget, SES inboxes, staging network + DB done.
 - [Model routing v2](project_model_routing_v2.md) — ⭐ since 2026-10-13: main Opus 5.5; reviewer Opus, walker Sonnet (GET-first, revert on bad walk), Explore Haiku; compact-nudge hook; paths: rules can't match ../CMS.
 - [System landscape](project_system_landscape.md) — ⭐ brand-new C# monolith in CMS/ = functional copy of the Node demo (read-only reference); old Codigo system + Lucy untouched/retired; all owner decisions of 2026-10-09.

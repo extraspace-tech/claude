@@ -18,7 +18,7 @@ Build the base that every later sub-project stands on, so that S1–S4 only add 
 
 1. A running monolith on AWS staging, deployed by CI, with production one approval away.
 2. Customer sign-in for the Flutter app: email + one-time code, then access and refresh tokens.
-3. Staff sign-in for the admin through Microsoft Entra ID, with roles, permissions and an audit log.
+3. Staff sign-in for the admin with email + a one-time code (PM, 2026-10-13; first designed with Microsoft Entra ID), with roles, permissions and an audit log.
 4. The admin UI shell (React), with staff, roles and audit screens.
 5. The shared platform pieces: error format, validation, logging, jobs, email, money and time helpers, OpenAPI, tests.
 
@@ -203,9 +203,9 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 | Table | Columns (besides `id`, `created_at`, `updated_at`) | Notes |
 |---|---|---|
 | `customer` | `email` (unique; stored trimmed and lower-case), `first_name`, `last_name`, `phone` | S1 adds the SiteLink tenant links in its own table |
-| `customer_login_code` | `email` (unique), `code_hash`, `expires_at`, `attempts`, `consumed_at`, `request_ip`, `last_sent_at`, `window_started_at`, `sent_in_window` | one row per email; a new request overwrites the code fields. The last three columns (S0-3) make the per-email limits exact |
+| `login_code` (S0-4b; was `customer_login_code`) | `purpose` (`Customer` / `Staff`), `email` (unique per purpose), `code_hash`, `expires_at`, `attempts`, `consumed_at`, `request_ip`, `last_sent_at`, `window_started_at`, `sent_in_window` | one row per email; a new request overwrites the code fields. The last three columns (S0-3) make the per-email limits exact |
 | `customer_refresh_token` | `customer_id`, `family_id`, `token_hash` (unique), `expires_at`, `replaced_by_id`, `revoked_at`, `user_agent`, `ip` | rotation and theft detection (§6.1) |
-| `staff_user` | `email` (unique, lower-case), `display_name`, `entra_object_id` (unique, set at first sign-in), `role_id`, `active`, `last_sign_in_at`, `created_by_staff_id`, `updated_by_staff_id` | staff must exist before they can sign in |
+| `staff_user` | `email` (unique, lower-case), `display_name`, `role_id`, `active`, `last_sign_in_at`, `created_by_staff_id`, `updated_by_staff_id` | staff must exist before they can sign in |
 | `role` | `name` (unique), `permissions text[]`, `is_system` | system roles cannot be deleted |
 | `audit_log` | `staff_user_id`, `action`, `entity_type`, `entity_id`, `changes jsonb`, `ip`, `occurred_at` | append-only; no update or delete endpoint; no `created_at`/`updated_at` (S0-4) |
 | `data_protection_keys` | (EF Core Data Protection table) | Development and Testing only since S0-4. On AWS the key ring lives in SSM Parameter Store (`/es/<env>/data-protection/`, SecureString, KMS); the app refuses to start outside Development/Testing without `DataProtection:SsmPath` (owner, 2026-10-13) |
@@ -243,6 +243,8 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 
 ### 6.2 Staff sign-in (admin)
 
+> 🔴 **Superseded on 2026-10-13 (PM: no Microsoft Entra).** Staff sign in with their email and a one-time code. The Entra text below is kept as history only; "As built in S0-4b" at the end of this section is what the code does.
+
 - Microsoft Entra ID through OpenID Connect with `Microsoft.Identity.Web`, single-tenant: the client's directory only.
 - Flow:
   1. The SPA calls `GET /admin/api/me`. A `401` sends the browser to `GET /admin/api/auth/login`.
@@ -268,6 +270,17 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 - CSRF: built-in antiforgery (cookie `__Host-es-csrf`); failure → 400 `CSRF_FAILED`.
 - Missing Entra settings: Production refuses to start; elsewhere `/auth/login` → 503 `ADMIN_SIGNIN_UNAVAILABLE`.
 - Development-only `POST /admin/api/auth/dev-login { email }`: loopback only, refused when a forwarded header is present.
+
+**As built in S0-4b** (plan `docs/superpowers/plans/2026-10-13-s0-4b-staff-email-code.md`, approved 2026-10-13; replaces every Entra point above and removes dev-login):
+
+- `POST /admin/api/auth/code { email }` → always 202. An email goes out only to an active staff member, or to a bootstrap address while no active Owner exists; any other address stores and sends nothing.
+- `POST /admin/api/auth/code/verify { email, code }` → 204 + the admin cookie. Errors as in §6.1 (400 `INVALID_CODE` / `TOO_MANY_ATTEMPTS`, 429 `RATE_LIMITED`); a person who may no longer sign in → 403.
+- Same code rules as customers (§6.1): 6 digits, 10 minutes, 5 attempts, 60 s between sends, 5 per hour; per IP 20 requests and 30 checks per hour.
+- One code engine with a **purpose** (`Features/Identity/Contracts/ILoginCodes`): the purpose is part of the row key, the lock and the hash, so a customer code never signs in staff and the reverse.
+- `Admin:AllowedEmailDomains` (empty = any): when set, staff can only be added on those domains and other addresses never get a code. With email codes the admin is as safe as the staff mailbox.
+- The staff member's display name is typed by the admin (`displayName` on add and edit).
+- Local development: the code is printed in the console (`Email:Transport=Log`); cookies are `es-admin` / `es-csrf` over plain http.
+- Unchanged from S0-4: the cookie (staff id only, reloaded every request), CSRF, 401/403 as JSON, bootstrap only while no active Owner exists.
 
 ### 6.3 Permissions and audit
 
@@ -391,7 +404,7 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 1. CI is green: build with 0 errors, all tests pass, admin UI builds, API types are current.
 2. Staging deploys automatically from `main`. Production has a working, approval-gated deploy job; the production stack itself may wait until the AWS account question closes.
 3. On staging, a real email address receives a code, signs in, refreshes, and signs out. Replaying an old refresh token cancels the session family.
-4. On staging, a bootstrap staff member signs in with Entra and adds a second staff member with a limited role. That person cannot see or call `staff.manage` actions. A company user who was not added gets 403.
+4. On staging, a bootstrap staff member signs in with an emailed code (S0-4b; was Entra) and adds a second staff member with a limited role. That person cannot see or call `staff.manage` actions. A company user who was not added gets 403.
 5. Every admin change in step 4 appears in the audit log.
 6. The Hangfire dashboard opens only for staff with `jobs.manage`. `IdentityHousekeeping` runs once per day with 2 tasks running.
 7. No secret is in the repo or in CI logs (checked with a secret scan in CI).
@@ -402,7 +415,7 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 | # | Item | Needed by |
 |---|---|---|
 | 1 | ~~AWS account~~ DECIDED 2026-10-12: one client-owned account for both environments | — |
-| 2 | Entra ID app registration by the client's IT; confirm the client is on Microsoft 365 (inferred from MX records) | admin sign-in on staging |
+| 2 | ~~Entra ID app registration~~ dropped 2026-10-13 (no Entra). Was: Entra ID app registration by the client's IT; confirm the client is on Microsoft 365 (inferred from MX records) | admin sign-in on staging |
 | 3 | SES: sender address, and SPF + DKIM for the domain by the client's IT (SPF today allows only Outlook, Mandrill and SendGrid) | customer codes on staging |
 | 4 | Host name(s), for example `app.<domain>` with `/api` and `/admin` on one host | staging HTTPS |
 | 5 | Make `extraspace-tech/cms` private (recommended; org admin) | before the first commit |
