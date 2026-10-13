@@ -234,3 +234,47 @@ MVC used Swashbuckle's `AddSecurityDefinition` and an `IOperationFilter` for the
 
 - **Request bodies must be `public`.** The .NET 10 validation source generator skips `internal` types: with `internal` bodies, bad input was not validated and the handler ran anyway (the tests got `INVALID_CODE` instead of 400 `VALIDATION_FAILED`). Response records and services can stay `internal`. MVC validated by reflection, so it did not care.
 - **A second test host shares Hangfire's static state.** `WithWebHostBuilder` hosts set `App:Role=Api`, so they do not start a second job server. This is not a Minimal API rule, but you will hit it in endpoint tests.
+
+## 7. S0-4: cookie sign-in, CSRF, permissions, audit
+
+### 7.1 The `/admin/api` group
+
+```csharp
+var admin = app.MapGroup("/admin/api").RequireStaff().WithEnumGuard();
+admin.MapAdminEndpoints(app.Environment);
+```
+
+- `RequireStaff()` does two things once for the whole group: `.RequireAuthorization("Staff")` (the cookie scheme must have a signed-in staff member) and `.AddEndpointFilter<AdminRequestFilter>()`.
+- **The MVC equivalent** was `[Authorize(AuthenticationSchemes = "Staff")]` on an `AdminControllerBase` plus a global action filter. Here the group is the base class.
+
+### 7.2 A filter class instead of a lambda
+
+`AdminRequestFilter : IEndpointFilter` puts `staffId` in the log, checks the CSRF token on writes, and opens the audit context.
+
+- It is a top-level class, because the architecture rule `EndpointDataAccess` flags data access inside classes that map routes.
+- **Gotcha:** a filter added with `AddEndpointFilter<T>()` is built **once per endpoint**, not per request. A scoped service (the `DbContext`, `AuditContext`) taken in its constructor would be shared by every request. Resolve scoped services inside `InvokeAsync` from `context.HttpContext.RequestServices`. MVC's `[ServiceFilter]` resolved per request, so this is new.
+- It **fails closed**: a non-anonymous route that somehow has no staff id gets 401 instead of skipping the checks.
+
+### 7.3 Cookie authentication for an API
+
+- A cookie scheme normally **redirects** to a login page on 401/403. An API must answer with a status, so the cookie events `OnRedirectToLogin` / `OnRedirectToAccessDenied` only set 401 / 403, and the status-code pages write the JSON problem.
+- `OnValidatePrincipal` runs on every request that reads the cookie. We reload the staff member there, so deactivating someone takes effect at their next request. The cookie itself holds only the staff id.
+
+### 7.4 CSRF with antiforgery
+
+- Minimal APIs check antiforgery tokens **only for form posts**. A JSON API must call `IAntiforgery.ValidateRequestAsync` itself; our group filter does it on every write. MVC's `[ValidateAntiForgeryToken]` / `AutoValidateAntiforgeryToken` did this for you.
+- The admin UI fetches the token from `GET /admin/api/auth/csrf` and sends it as `X-CSRF-TOKEN`. The token is tied to the signed-in staff member.
+
+### 7.5 One policy per permission
+
+```csharp
+staff.MapPost("/staff", AddStaff).RequireAuthorization("staff.manage");
+```
+
+- Each feature registers its permission names; one policy per name is built at start-up. The MVC equivalent is `[Authorize(Policy = "staff.manage")]`.
+
+### 7.6 Gotchas found in S0-4
+
+- **A group's own `""` route keeps a trailing slash** in its route template (`/admin/api/staff/`), which shows up in logs and audit rows. Map with `MapGroup("")` and full paths (`/staff`) instead.
+- **A handler whose only parameter is `HttpContext` and that returns `Task<T>`** binds to the `RequestDelegate` overload: the returned result is thrown away (200 instead of 204). The analyzer warns (ASP0016); cast the handler to `(Delegate)`.
+- **EF cannot `OrderBy` after `Select(x => new SomeRecord(...))`.** Order first, then project.

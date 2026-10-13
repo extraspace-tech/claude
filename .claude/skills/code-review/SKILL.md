@@ -65,7 +65,7 @@ Call `Agent` with:
 
 Workspace root: /Users/waiyanmin/Projects/Extra Space/Claude
 Code repo under review: /Users/waiyanmin/Projects/Extra Space/CMS
-Conventions: <workspace root>/.claude/CLAUDE.md, <workspace root>/.claude/rules/cross-repo.md, <workspace root>/.claude/rules/cms.md, <workspace root>/.claude/rules/engineering-checklist.md; spec feature doc: /Users/waiyanmin/Projects/Extra Space/Backend Demo/backend/.claude/backend-spec/features/<NN>-*.md
+Conventions: <workspace root>/.claude/CLAUDE.md, <workspace root>/.claude/rules/cross-repo.md, <workspace root>/.claude/rules/cms.md, <workspace root>/.claude/rules/engineering-checklist.md, <workspace root>/docs/notes/cms/built-so-far.md; spec feature doc: /Users/waiyanmin/Projects/Extra Space/Backend Demo/backend/.claude/backend-spec/features/<NN>-*.md
 
 Changed files:
 <file list from Step 1>

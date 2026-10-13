@@ -207,8 +207,8 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 | `customer_refresh_token` | `customer_id`, `family_id`, `token_hash` (unique), `expires_at`, `replaced_by_id`, `revoked_at`, `user_agent`, `ip` | rotation and theft detection (§6.1) |
 | `staff_user` | `email` (unique, lower-case), `display_name`, `entra_object_id` (unique, set at first sign-in), `role_id`, `active`, `last_sign_in_at`, `created_by_staff_id`, `updated_by_staff_id` | staff must exist before they can sign in |
 | `role` | `name` (unique), `permissions text[]`, `is_system` | system roles cannot be deleted |
-| `audit_log` | `staff_user_id`, `action`, `entity_type`, `entity_id`, `changes jsonb`, `ip`, `occurred_at` | append-only; no update or delete endpoint |
-| `data_protection_keys` | (EF Core Data Protection table) | cookie keys shared by all instances; created by S0-2's first migration `InitialPlatform`. 🔴 Stored as plain XML: S0-4 must encrypt the key ring or revoke `es_readonly`'s read before cookies ship |
+| `audit_log` | `staff_user_id`, `action`, `entity_type`, `entity_id`, `changes jsonb`, `ip`, `occurred_at` | append-only; no update or delete endpoint; no `created_at`/`updated_at` (S0-4) |
+| `data_protection_keys` | (EF Core Data Protection table) | Development and Testing only since S0-4. On AWS the key ring lives in SSM Parameter Store (`/es/<env>/data-protection/`, SecureString, KMS); the app refuses to start outside Development/Testing without `DataProtection:SsmPath` (owner, 2026-10-13) |
 | schema `hangfire` | (Hangfire tables) | created by Hangfire |
 
 ## 6. Identity
@@ -259,6 +259,16 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
 - **Anti-forgery:** the SPA reads a token from `GET /admin/api/auth/csrf` and sends it as the `X-CSRF-TOKEN` header on every write; the server validates it on all admin `POST/PUT/PATCH/DELETE`.
 - `POST /admin/api/auth/logout` clears the cookie.
 
+**As built in S0-4** (plan `docs/superpowers/plans/2026-10-13-s0-4-admin-backend.md`, 17 decisions approved by the owner on 2026-10-13):
+
+- Library: the built-in `Microsoft.AspNetCore.Authentication.OpenIdConnect` handler, not `Microsoft.Identity.Web`. Single tenant, code + PKCE, client secret, callback `/admin/api/auth/callback`, front-channel sign-out off. A token without `oid` is refused.
+- Lookup: by `oid`; on the first sign-in by `preferred_username` (or `email`), lower-cased, then `oid` is saved. An email row already linked to another `oid` is refused. Refused → 403 JSON problem at the callback, no cookie.
+- Bootstrap works only while no active Owner exists (advisory lock `staff-owners`).
+- The cookie holds only the staff id; every request reloads the staff member and role, so deactivation or a role change applies at the next request. 401/403 are JSON problems, never redirects. In Development only the cookies are `es-admin` / `es-csrf` (no `__Host-` prefix), so local plain http works.
+- CSRF: built-in antiforgery (cookie `__Host-es-csrf`); failure → 400 `CSRF_FAILED`.
+- Missing Entra settings: Production refuses to start; elsewhere `/auth/login` → 503 `ADMIN_SIGNIN_UNAVAILABLE`.
+- Development-only `POST /admin/api/auth/dev-login { email }`: loopback only, refused when a forwarded header is present.
+
 ### 6.3 Permissions and audit
 
 - Permissions are string constants in code, owned by each feature (S0: `staff.manage`, `roles.manage`, `audit.read`, `jobs.manage`).
@@ -271,6 +281,16 @@ Metric filters on Error lines, failed-permanently jobs and outside-call failures
   - `GET/POST/PATCH/DELETE /admin/api/roles` (`roles.manage`): system roles cannot be deleted.
   - `GET /admin/api/audit` (`audit.read`): filter by staff, entity and date; paged.
   - `GET /admin/api/permissions`: the catalogue, for the role editor.
+
+**As built in S0-4:**
+
+- Each feature registers its permissions with `services.AddPermissions(...)` (`Features/Admin/Contracts`); stored names that left the catalogue are ignored and not returned.
+- Audit: the group's endpoint filter opens an audit context (staff, `"<METHOD> <route template>"`, IP); an EF SaveChanges interceptor writes one `audit_log` row per changed `IAudited` entity **in the same save** (`changes = { field: { from, to } }`). Admin writes must use tracked entities (`ExecuteUpdate`/`ExecuteDelete` bypass the audit). Sign-ins and Hangfire dashboard actions are log lines, not audit rows.
+- `xmin` concurrency on `staff_user` and `role`: responses carry `version`; PATCH bodies and `DELETE ?version=` must send it; stale → 409 `CONFLICT`. Foreign-key violations also → 409 `CONFLICT`.
+- Staff rules: no self-deactivation (409 `CANNOT_DEACTIVATE_SELF`); at least one active Owner always remains (409 `LAST_OWNER`); **only an active Owner** may grant the Owner role or change an Owner (403), re-checked under the `staff-owners` lock. Staff rows are never deleted.
+- Roles: Owner is seeded with a fixed id and cannot be changed or deleted (409 `SYSTEM_ROLE`); a role in use cannot be deleted (409 `ROLE_IN_USE`); names unique ignoring case. `GET /roles` and `GET /permissions` need only a signed-in staff member.
+- `GET /audit`: newest first, `page`/`pageSize` (1–100, default 50), `from`/`to` must carry an offset or `Z`.
+- Dashboard `/admin/jobs` behind `jobs.manage` (401/403 JSON); its POSTs need the antiforgery token.
 
 ## 7. Background jobs and email
 

@@ -140,8 +140,15 @@ changes them:
 
 `.mcp.json` has two read-only MySQL servers pointing at the **old system's PRODUCTION** databases:
 `mysql-dev` = SG production (misleading name), `mysql-prod-my` = MY production. Aggregate reads only,
-when the owner asks (`.claude/rules/old-backend.md`). A read-only `postgres-dev` for our own staging
-is still owed.
+when the owner asks (`.claude/rules/old-backend.md`).
+
+Our own PostgreSQL has two MCP servers. Both run Postgres MCP Pro: `uvx --python 3.12 --with 'mcp<2'
+postgres-mcp --access-mode=restricted`. Restricted mode allows read-only SQL only. Added 2026-10-13.
+- `postgres-local`: the Docker database `localhost:5433`, as `postgres`. Start it first with `docker compose up -d` in `../CMS`.
+- `postgres-staging`: staging through the SSM tunnel `localhost:15432`, as `es_readonly`, so the
+  database itself refuses writes. The tunnel must be open (setup guide B5 step 1). This user cannot
+  see schema `hangfire`.
+- There is no production PostgreSQL MCP. The hard rule below applies.
 
 🔴 **Production DB hard rule (carried over from Porsche, owner 2026-10-06).** A production database
 MCP, if one is ever added, is for debugging reads only. Never write to production. Never run a walk

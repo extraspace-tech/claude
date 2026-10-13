@@ -5,6 +5,8 @@ metadata:
   type: feedback
 ---
 
+**Superseded in part 2026-10-13 by [[project-model-routing-v2]]:** main session is now Opus 5.5 high, dev-walker Sonnet medium, Explore Haiku low. The role split below (architect never edits product code, hub, verdict per piece) still holds.
+
 The main session (Fable, high effort) is the architect and software engineer: it designs, plans, briefs, reviews and reports. It does not write or patch product code itself, not even a two-line fix. Every subagent (implementer, reviewer, walker, exploration) runs on Opus 5.5 at high effort. Fable may run several Opus subagents in parallel when the pieces are independent, must make sure they share what they depend on, and after they finish it reviews their work and reports a verdict (ACCEPT / FIX NEEDED / BLOCKED).
 
 **Why:** user, 2026-10-04 and 2026-10-05 (Porsche): "when you are deploying the subagents always use opus 5.5 high. And your only job Fable, is to review their work" … "Fable can deploy multiple opus 5.5 high sub agents in parallel … make sure the multiple sub agents communicate each other." Copied to Extra Space 2026-10-09 at the user's request ("the same claude set up").

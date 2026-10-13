@@ -12,7 +12,7 @@
       "../../Extra Space old"
     ]
   },
-  "model": "fable",
+  "model": "opus",
   "env": {
     "AWS_SHARED_CREDENTIALS_FILE": "/dev/null"
   },
@@ -71,18 +71,31 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/compact-nudge.py\"",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
-    "figma@claude-plugins-official": true,
-    "caveman@caveman": true,
+    "figma@claude-plugins-official": false,
+    "caveman@caveman": false,
     "ponytail@ponytail": true,
-    "fullstack-dev-skills@fullstack-dev-skills": true,
+    "fullstack-dev-skills@fullstack-dev-skills": false,
     "csharp-lsp@claude-plugins-official": true,
-    "andrej-karpathy-skills@karpathy-skills": true
+    "andrej-karpathy-skills@karpathy-skills": false
   },
+  "disabledMcpjsonServers": ["figma-console", "serena", "mysql-dev", "mysql-prod-my"],
+  "claudeMdExcludes": ["/Users/waiyanmin/.claude/CLAUDE.md"],
   "extraKnownMarketplaces": {
     "fullstack-dev-skills": {
       "source": {

@@ -1,7 +1,8 @@
 # Memory Index
 
-- [Setup owed (RESUME)](project_setup_owed.md) — ⭐ RESUME HERE: S0-1 done + pushed (staging network + DB live, ≈ $128/mo); S0-2 merged (PR #1); S0-2b on main; S0-3 done on branch s0-3-customer-identity (uncommitted) → next S0-4 plan; open owner/IT items.
+- [Setup owed (RESUME)](project_setup_owed.md) — ⭐ RESUME HERE: S0-1 done + pushed (staging network + DB live, ≈ $128/mo); S0-2 merged (PR #1); S0-2b on main; S0-3 on main (9c678ce); S0-4 built on branch s0-4-admin-backend (uncommitted, 278 tests, walk PASS) → next S0-5 plan; open owner/IT items.
 - [AWS account](reference_aws_account.md) — ⭐ client account 110611798568 (staging + prod), profile `extraspace` via `aws login`; NEVER the `default` profile (Porsche 747103386453); client Lambdas/buckets untouched; bootstrap, budget, SES inboxes, staging network + DB done.
+- [Model routing v2](project_model_routing_v2.md) — ⭐ since 2026-10-13: main Opus 5.5; reviewer Opus, walker Sonnet (GET-first, revert on bad walk), Explore Haiku; compact-nudge hook; paths: rules can't match ../CMS.
 - [System landscape](project_system_landscape.md) — ⭐ brand-new C# monolith in CMS/ = functional copy of the Node demo (read-only reference); old Codigo system + Lucy untouched/retired; all owner decisions of 2026-10-09.
 - [AWS cost estimate](reference_aws_cost_estimate.md) — v4 (PM budget $1,000–1,500): $1,019/mo, budget ≈ $1,170, ≈ $906 with DB RI; m8g.large + Proxy, api/jobs split, Valkey, 2 NAT, WAF; client page URL, unit prices.
 - [Client artifacts](reference_client_artifacts.md) — client's own Claude prototypes (Cowork Manager, ES App, Admin): links, extracted rules in docs/notes/client-artifacts/, conflicts vs demo OPEN.
@@ -9,7 +10,7 @@
 - [Workspace layout](project_workspace_layout.md) — Claude/ = context repo (start here); siblings CMS/ (the monolith, PUBLIC), Backend Demo/backend (demo + spec, READ ONLY), API/ (es-api, unused); Extra Space old/ (READ ONLY, secrets).
 - [Reference first](feedback_reference_first.md) — ⭐ read the spec feature doc + cited TS before asking the owner or BA.
 - [Design gate before code](feedback_design_gate_before_code.md) — ⭐ present the design, STOP for go-ahead before code, even when the prompt says "implement".
-- [Roles: Fable architect, Opus subagents](feedback_subagents_opus_fable_reviews.md) — ⭐ Fable designs / briefs / reviews, never edits product code; Opus implementer / reviewer / walker; verdict per piece.
+- [Roles: Fable architect, Opus subagents](feedback_subagents_opus_fable_reviews.md) — ⭐ Fable designs / briefs / reviews, never edits product code; Opus implementer / reviewer / walker; verdict per piece. Models superseded by routing v2.
 - [SDD without commits](feedback-sdd-without-commits.md) — run subagent-driven plans with snapshot trees (no commits), Opus everywhere, rulings ledger, merge-not-paste.
 - [User commits & tests](feedback-user-commits-and-tests.md) — 🔴 NEVER commit / push, also on "let's push": give the message and stop; "GitHub message" = commit + PR title/body in bullets.
 - [Plain English](feedback_plain_english.md) — simple English everywhere; detail stays full.
