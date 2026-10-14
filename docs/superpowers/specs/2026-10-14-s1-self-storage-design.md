@@ -139,7 +139,7 @@ Dropped from the demo: `RentalPlanQuote` (written, never read), `UnitSyncCursor`
 ### 6.1 Client
 - A typed `HttpClient` posting SOAP 1.1 envelopes to CCWs 3.5 (no WCF). One C# method per operation we use; element names and order exactly as the WSDL (`s1-checks.md` §B). The DataSet reply is parsed into rows; only the columns we need are read.
 - Operations used: `UnitsInformation_v3`, `UnitsInformationByUnitID`, `UnitTypePriceList_v2`, `DiscountPlansRetrieve`, `PaymentSettings` (past-due limit), `TenantListDetailed_v3`, `TenantNewDetailed_v3`, `LedgersByTenantID` (also the gate code), `PaymentsByLedgerID`, `ReservationNewWithSource_v5`, `ReservationUpdate_v4`, `MoveInCostRetrieveWithDiscount_v2`, `MoveInReservation_v6`, `MoveInWithDiscount_v7`, `PaymentSimpleCashWithSource`. Each is tagged Read or Write.
-- **Return codes are per operation** (API PDF: -2 / -14 mean different things on move-in and payment). Each method maps its own codes into a typed result; unknown negative codes become `SiteLinkException(operation, code, message)`.
+- **Return codes are per operation** (API PDF: -2 / -14 mean different things on move-in and payment). Each method maps its own codes into a typed result; unknown codes ≤ 0 (`Ret_Code ?? Ret_Cod`, as the demo) become `SiteLinkException(operation, code, message)` (S1-1 ruling: 0 is a refusal too).
 - **Card guard:** the two move-in methods are built by one helper that writes every card / bank element blank and `iPayMethod 2`. A unit test asserts every card element is empty. No other card-carrying operation gets a method.
 - `bTestMode` is never used (it still records the payment, API p.102/117/174).
 - Sensitive replies: `LedgersByTenantID` carries SSN, web password and gate code, and `TenantListDetailed_v3` the gate code (API p.67-68, p.251); we read only the columns we need and never log or store the others.
@@ -370,7 +370,7 @@ Each has `Jobs:<Name>:Enabled`. Config keys introduced: `SiteLink:*` (§6.2), `S
 
 **Deliberate changes:** preview endpoints dropped (server prices); quotes not stored; Units / Leases / Reservations / Transactions read-only; guarded admin reads; 403 instead of 401; PATCH with version instead of PUT of all fields; payments by type on the dashboard.
 
-**Additions (QOL):** Sync now / Full resync / last synced; Refresh from SiteLink / Unlink tenant; reservation Cancel with refund; Needs attention page; Transactions linked to SiteLink receipt numbers; dashboard country filter; card-expiry email.
+**Additions (QOL):** Sync now / Full resync / last synced, as a "SiteLink sync" panel on Units (last sync and last error per site) with a Site filter on the Units list (S1-1 decision 15; Sync now writes no `audit_log` row, its log line carries `staffId`); Refresh from SiteLink / Unlink tenant; reservation Cancel with refund; Needs attention page; Transactions linked to SiteLink receipt numbers; dashboard country filter; card-expiry email.
 
 ## 16. Definition of done for S1
 

@@ -22,7 +22,7 @@ Always loaded. Applies to every file under `../CMS/`. Rewritten 2026-10-09 after
 8. Configuration values come from the environment or a secret store, never from a committed file.
 9. Write tests with the code (xUnit). Where a spec feature doc has an acceptance table we keep, port it as `[Theory]` data.
 10. A feature uses another feature only through its `Features/<Feature>/Contracts/` folder (service interfaces + DTOs), never its entities or tables. The architecture test in `tests/ExtraSpace.Api.Tests/Architecture/` enforces it; never weaken that test to make a build pass.
-11. Outside calls (SiteLink, Stripe, SES) have a timeout, a circuit breaker and retries for safe reads only. Side effects after a payment run as idempotent jobs whose trigger is saved in the payment's own transaction (outbox row or enlisted Hangfire job; S1 decides).
+11. Outside calls (SiteLink, Stripe, SES) have a timeout, a circuit breaker and retries for safe reads only. Side effects after a payment run as idempotent jobs whose trigger is saved in the payment's own transaction (outbox row, S1-1 `Platform/Outbox`: `IOutbox.Enqueue` inside the payment's transaction).
 
 ## Conventions to decide in the design spec (write the answer here)
 
@@ -49,6 +49,8 @@ dotnet tool restore
 dotnet ef database update --project src/ExtraSpace.Api --connection "Host=localhost;Port=5433;Database=extraspace;Username=postgres"   # migrate BEFORE the first run
 dotnet run --project src/ExtraSpace.Api      # http://localhost:5080
 ```
+
+SiteLink (S1-1): with no `SiteLink:*` login in user-secrets every SiteLink call answers 503 and the unit refresh records "SiteLink could not be reached."; to call LSETUP, the owner sets `SiteLink:CorpCode`, `SiteLink:CorpUserName` (`user:::key`), `SiteLink:CorpPassword` with a no-print command (never echo them). Writes go only to `SiteLink:WriteAllowList` (`LSETUP`).
 
 Development sends email through the `Log` transport: the sign-in code is printed in the console (`Development email`). Health `/health/live`, `/health/ready`; OpenAPI `/openapi/v1.json`; Swagger UI `/swagger` (both outside production). In Seq, find a request with `@TraceId = '<id>'` (Seq keeps the trace id as its built-in field, not as `traceId`). Shared environments: migration scripts go to `docs/migrations/` via `dotnet ef migrations script --idempotent`; strip the BOM before running them with `psql`. Kill the app after testing (ports 5080 and 5173 are in `.claude/dev-ports`).
 
