@@ -2,7 +2,7 @@
 
 Source: https://api.smdservers.net/CCWs_3.5/CallCenterWs.asmx?WSDL, fetched 2026-10-09 (public WSDL, no credentials). 308 operations.
 
-The 18 operations the demo uses (spec 02) all exist here. Payments are recorded with `PaymentSimpleCashWithSource` only. Never call an operation that takes card data (`PaymentSimpleWithSource*`, `PaymentMultipleWithSource*`, `POSItemPayment*`, `RefundPaymentCreditCard*`, `PaymentSimpleACH*`).
+The 18 operations the demo uses (spec 02) all exist here. Payments are recorded with `PaymentSimpleCashWithSource` only. Never call an operation that takes card data: `PaymentSimple`, `PaymentSimpleWithSource*`, `PaymentSimpleWithPrepaidDiscount*`, `PaymentMultipleWithSource*`, `PaymentSimpleACH*`, `POSItemPayment*`, `RefundPaymentCreditCard*`, `ReservationFeeAdd*` (all 6), `ReservationBillingInfoUpdate*`, `TenantBillingInfoUpdate*`, `SurchargeApplicable*`, `MultiUnitMoveIn*`, `MoveInCostRetrieveWithDiscount_v4` (and its `_Reservation_v4` variants). `MoveInReservation*` and `MoveInWithDiscount*` also carry card elements: allowed only with the card elements blank and `iPayMethod 2` (owner, S1 decision 4; "2 = Cash" comes from a demo comment, not the WSDL). Full list and source: `docs/notes/s1-research/s1-checks.md` §C (2026-10-14).
 
 ```
 ACHProcessorSiteCurrentType

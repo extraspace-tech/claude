@@ -13,8 +13,9 @@ loses every one of them.
 
 ### What we are building (owner decisions, 2026-10-09)
 
-The client is ExtraSpace Asia (self-storage, Singapore and Malaysia). The first release covers
-**Singapore AND Malaysia** (PM, 2026-10-09) on **one platform**; currency, time zone and tax live
+The client is ExtraSpace Asia (self-storage, Singapore, Malaysia and Korea). The first release covers
+**Singapore AND Malaysia** (PM, 2026-10-09) **plus Korean sites** (owner, 2026-10-14; Korea pays through
+another provider, not Stripe) on **one platform**; currency, time zone and tax live
 per site, never hard-coded. We build a **brand-new C# /
 ASP.NET Core monolith, from scratch**: one deployable that holds the mobile API, the admin back
 office and the background jobs.
@@ -128,10 +129,12 @@ Per-repo conventions live in `.claude/rules/cms.md` (the monolith), `.claude/rul
 Design defaults. They come from the spec, and we keep them because they are sound; only the owner
 changes them:
 
-- No card data, ever. Stripe only through hosted Checkout + one signature-verified webhook. A new
-  payment flow needs business approval.
-- SiteLink: never a card-carrying operation. Record payments with `PaymentSimpleCashWithSource`.
-  Request field names exactly as in the WSDL (`docs/notes/sitelink/`).
+- No card data, ever. Cards only through Stripe's SDK in the app; our server creates and confirms
+  PaymentIntents (Connect direct charges; SG and MY platforms); signature-verified webhooks. A new
+  payment flow needs business approval. (Owner, 2026-10-14; was hosted Checkout.)
+- SiteLink: never a card-carrying operation (only exception: the two move-in operations with blank
+  card fields + Cash). Record payments with `PaymentSimpleCashWithSource`. Call SiteLink on demand
+  only (call budget). Request field names exactly as in the WSDL (`docs/notes/sitelink/`).
 - Business dates use the site's time zone (`site.time_zone`, default `Asia/Singapore`; MY sites `Asia/Kuala_Lumpur`); storage is UTC.
 - Money is exact: `numeric` in PostgreSQL and `decimal` in C#. The rounding rule is set in the
   design spec.
